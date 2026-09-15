@@ -1,0 +1,2 @@
+# Tudo em LF: units do systemd e scripts vao para Linux, e CRLF quebra ambos
+* text=auto eol=lf

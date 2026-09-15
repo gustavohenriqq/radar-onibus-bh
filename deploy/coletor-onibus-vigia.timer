@@ -1,0 +1,12 @@
+# Timer do systemd no lugar de cron: cada execucao fica no journalctl, o
+# resultado aparece em "systemctl list-timers" e nao ha crontab escondido.
+[Unit]
+Description=Roda o vigia do coletor a cada 5 minutos
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

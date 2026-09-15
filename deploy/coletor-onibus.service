@@ -1,0 +1,32 @@
+[Unit]
+Description=Coletor GTFS-RT de Belo Horizonte (vehicle-positions)
+Wants=network-online.target
+After=network-online.target
+# Nao sobe se o block volume nao estiver montado. Sem isso, uma falha de
+# montagem faria o coletor gravar no disco de boot, em silencio, ate encher.
+RequiresMountsFor=/dados
+# Padrao do systemd: desiste depois de 5 falhas em 10 s. Para o processo cuja
+# queda perde dado para sempre, desistir nunca e a resposta certa.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=coletor
+Group=coletor
+WorkingDirectory=/opt/coletor-onibus
+EnvironmentFile=/opt/coletor-onibus/.env
+ExecStart=/opt/coletor-onibus/.venv/bin/python -m coletor
+Restart=always
+RestartSec=10
+# Log sai direto, sem buffer, para aparecer no journalctl na hora
+Environment=PYTHONUNBUFFERED=1
+
+# Endurecimento: o coletor so precisa escrever em /dados e no proprio log
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/dados /var/log/coletor-onibus
+
+[Install]
+WantedBy=multi-user.target

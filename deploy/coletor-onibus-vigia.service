@@ -1,0 +1,15 @@
+[Unit]
+Description=Vigia do coletor: alerta se nao houver arquivo novo em 10 minutos
+RequiresMountsFor=/dados
+
+[Service]
+Type=oneshot
+User=coletor
+Group=coletor
+WorkingDirectory=/opt/coletor-onibus
+EnvironmentFile=/opt/coletor-onibus/.env
+ExecStart=/opt/coletor-onibus/.venv/bin/python -m coletor.vigia
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/dados /var/log/coletor-onibus
