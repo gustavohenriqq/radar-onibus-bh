@@ -1,0 +1,18 @@
+# Documento de handoff com dado pessoal, fora do repositorio publico
+BRIEF.md
+CLAUDE.md
+
+# Segredos (token do Telegram, chaves SSH)
+.env
+*.key
+*.pem
+
+# Dado e log gerados pelo coletor
+dados/
+logs/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
