@@ -194,3 +194,9 @@ coletor/
 deploy/              units do systemd (coletor, vigia e timer)
 tests/               testes do coletor e do vigia
 ```
+
+## Licença
+
+Código sob licença [MIT](LICENSE). O dado coletado não fica neste repositório:
+ele vem do portal de dados abertos da Prefeitura de Belo Horizonte e segue as
+condições de uso publicadas lá.
