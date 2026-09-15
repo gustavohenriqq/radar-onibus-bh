@@ -14,7 +14,7 @@ A pergunta que o projeto vai responder:
 
 | Fase | Entrega | Situação |
 |---|---|---|
-| **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**; alerta externo pendente |
+| **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**, com alerta externo |
 | 1. Bronze e compactação | Job horário, bruto para Parquet | aguarda 1 semana de dado |
 | 2. Silver em PySpark | Decodificação, deduplicação, headway | aguarda 4 semanas de dado |
 | 3. Gold e dbt | Métricas por linha, corredor e faixa horária | |
@@ -60,8 +60,9 @@ feed GTFS-RT (a cada 30 s)
         v
    /dados/bronze/vehicle_positions/dt=AAAA-MM-DD/hh=HH/AAAAMMDDTHHMMSSZ.pb.gz
         |
-   vigia (systemd timer, 5 min) -> Telegram se 10 min sem arquivo novo
-   ping externo (healthchecks)  -> alerta se a VM inteira cair
+   vigia (systemd timer, 5 min) -> alerta local se 10 min sem arquivo novo
+   ping externo (healthchecks)  -> e-mail e Telegram se parar de gravar,
+                                   inclusive com a VM inteira fora do ar
 ```
 
 ## Decisões e o porquê
@@ -102,7 +103,9 @@ status 200 não é dado e não pode fingir ser feed.
 O vigia mede o resultado que importa: arquivo novo no disco.
 
 **Ping externo, além do vigia.** O vigia roda na mesma VM; se a VM cair, ele cai
-junto. Um serviço externo que alerta quando os pings param cobre esse caso.
+junto. Um serviço externo que alerta quando os pings param cobre esse caso, e
+foi o que tornou opcional o bot de Telegram próprio: o serviço externo já
+entrega no Telegram, sem token na VM.
 
 ## Rodando localmente
 
@@ -152,12 +155,28 @@ journalctl -u coletor-onibus -f          # acompanhar as coletas
 systemctl list-timers coletor-onibus-vigia.timer
 ```
 
+### Alertas
+
+Duas camadas, porque cada uma cobre o que a outra não vê:
+
+| Camada | Onde roda | Dispara quando | Cobre VM fora do ar? |
+|---|---|---|---|
+| Ping externo (healthchecks.io, plano gratuito) | fora da VM | nenhum arquivo gravado em 1 min + 10 min de tolerância | sim |
+| Vigia local (systemd timer, 5 min) | na VM | mais de 10 min sem arquivo novo; também 401/403 e falha de disco pelo coletor. Hoje só registra no log: o envio ao Telegram exige `TELEGRAM_BOT_TOKEN`, não configurado | não |
+
+O coletor só pinga **depois de gravar um arquivo**, não a cada tentativa. Assim
+o ping mede o resultado que importa: um coletor vivo que recebe 401 e não grava
+nada também para de pingar e dispara o alerta.
+
 ### Riscos conhecidos
 
 - **Recuperação de VM ociosa.** A documentação do provedor diz que instâncias
   Always Free com CPU p95 e rede abaixo de 20% por 7 dias podem ser
-  recuperadas. O coletor usa muito menos que isso. A mitigação é um ping
-  externo, que alerta mesmo com a VM fora do ar.
+  recuperadas. O coletor usa muito menos que isso. A migração da conta para
+  cobrança por uso foi solicitada em 14/09/2026 (sem custo enquanto só usa
+  recursos Always Free, com alerta de orçamento); relatos no fórum do provedor
+  dizem que contas pagas ficam fora dessa regra, mas a documentação oficial não
+  confirma. O ping externo é a garantia real.
 - **Sem backup do volume.** As políticas prontas de backup acumulam mais que os
   5 backups gratuitos. A proteção planejada é copiar o Parquet compactado da
   fase 1 para fora da VM.
