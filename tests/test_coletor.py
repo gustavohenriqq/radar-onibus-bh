@@ -64,6 +64,10 @@ def cfg(tmp_path: Path) -> Config:
         telegram_token=None,
         telegram_chat_id=None,
         healthcheck_url=None,
+        healthcheck_compactacao_url=None,
+        compactacao_folga_min=20,
+        compactacao_quarentena_h=48,
+        compactacao_nivel_zstd=3,
     )
 
 

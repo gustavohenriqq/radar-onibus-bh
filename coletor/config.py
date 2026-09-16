@@ -42,10 +42,20 @@ class Config:
     telegram_token: str | None
     telegram_chat_id: str | None
     healthcheck_url: str | None
+    healthcheck_compactacao_url: str | None
+    compactacao_folga_min: int
+    compactacao_quarentena_h: int
+    compactacao_nivel_zstd: int
 
     @property
     def dir_bronze(self) -> Path:
         return self.dir_dados / "bronze" / "vehicle_positions"
+
+    @property
+    def dir_bronze_horario(self) -> Path:
+        # Fica fora de dir_bronze de proposito: quem le a camada compactada nao
+        # deve esbarrar nos arquivos por coleta, e vice-versa.
+        return self.dir_dados / "bronze_horario" / "vehicle_positions"
 
     @property
     def dir_estado(self) -> Path:
@@ -54,13 +64,16 @@ class Config:
         return self.dir_dados / "_estado"
 
     @classmethod
-    def do_ambiente(cls) -> Config:
+    def do_ambiente(cls, exigir_url: bool = True) -> Config:
+        """`exigir_url=False` para os jobs que so mexem em arquivo ja gravado:
+        compactacao e limpeza nao falam com a API, entao nao devem morrer por
+        causa de uma chave de acesso ausente."""
         # Nao sobrescreve o que ja esta no ambiente: no systemd, o
         # EnvironmentFile tem prioridade sobre o .env.
         load_dotenv(override=False)
         contato = os.environ.get("COLETOR_CONTATO", "https://github.com/gustavohenriqq")
         return cls(
-            url=_obrigatoria("COLETOR_URL"),
+            url=_obrigatoria("COLETOR_URL") if exigir_url else os.environ.get("COLETOR_URL", ""),
             dir_dados=Path(os.environ.get("COLETOR_DIR_DADOS", "./dados")),
             dir_log=Path(os.environ.get("COLETOR_DIR_LOG", "./logs")),
             intervalo_s=int(os.environ.get("COLETOR_INTERVALO_S", "30")),
@@ -73,4 +86,12 @@ class Config:
             telegram_token=_opcional("TELEGRAM_BOT_TOKEN"),
             telegram_chat_id=_opcional("TELEGRAM_CHAT_ID"),
             healthcheck_url=_opcional("HEALTHCHECK_URL"),
+            healthcheck_compactacao_url=_opcional("HEALTHCHECK_COMPACTACAO_URL"),
+            # 20 min de folga: cobre relogio da VM fora de hora, jitter do timer
+            # e uma coleta atrasada pelo backoff, que tem teto de 5 min.
+            compactacao_folga_min=int(os.environ.get("COMPACTACAO_FOLGA_MIN", "20")),
+            # Quarentena antes de apagar o original. 48 h custam ~240 MB de
+            # disco e sao o seguro contra um bug apagar dado insubstituivel.
+            compactacao_quarentena_h=int(os.environ.get("COMPACTACAO_QUARENTENA_H", "48")),
+            compactacao_nivel_zstd=int(os.environ.get("COMPACTACAO_NIVEL_ZSTD", "10")),
         )

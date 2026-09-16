@@ -1,0 +1,14 @@
+[Unit]
+Description=Roda a limpeza dos originais ja compactados, uma vez por dia
+
+[Timer]
+# Uma vez por dia, de madrugada em BH (06:40 UTC e 03:40 local), quando o feed
+# tem dezenas de onibus em vez de milhares. Nao precisa ser horario: a
+# quarentena e de 48 h, entao nada fica urgente.
+OnCalendar=*-*-* 06:40:00
+Persistent=true
+AccuracySec=5min
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

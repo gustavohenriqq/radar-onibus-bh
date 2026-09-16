@@ -1,0 +1,24 @@
+[Unit]
+Description=Compacta as horas fechadas do Bronze num conteiner por hora
+RequiresMountsFor=/dados
+
+[Service]
+Type=oneshot
+User=coletor
+Group=coletor
+WorkingDirectory=/opt/coletor-onibus
+EnvironmentFile=/opt/coletor-onibus/.env
+ExecStart=/opt/coletor-onibus/.venv/bin/python -m compactacao.compactar
+# Nice e IOSchedulingClass: a coleta tem prioridade absoluta sobre a
+# compactacao. Numa VM de 1/8 de OCPU, um job pesado competindo com o coletor
+# atrasaria requisicao, e coleta atrasada e dado perdido.
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/dados /var/log/coletor-onibus
+
+[Install]
+WantedBy=multi-user.target
