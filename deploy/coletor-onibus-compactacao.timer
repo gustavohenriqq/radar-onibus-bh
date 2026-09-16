@@ -1,0 +1,16 @@
+[Unit]
+Description=Roda a compactacao horaria do Bronze
+
+[Timer]
+# Minuto 20 de cada hora: a hora H fecha as H+1:00 e o job exige 20 min de
+# folga, entao ele compacta H logo depois de H+1:20. A folga cobre relogio da
+# VM fora de hora, jitter do timer e coleta atrasada pelo backoff de 5 min.
+OnCalendar=*-*-* *:20:00
+# Persistent: se a VM estiver desligada na hora marcada, roda ao voltar. Sem
+# isso, uma janela perdida so seria recuperada na hora seguinte.
+Persistent=true
+AccuracySec=1min
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

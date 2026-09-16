@@ -1,0 +1,21 @@
+[Unit]
+Description=Apaga arquivos por coleta de horas ja compactadas e conferidas
+RequiresMountsFor=/dados
+
+[Service]
+Type=oneshot
+User=coletor
+Group=coletor
+WorkingDirectory=/opt/coletor-onibus
+EnvironmentFile=/opt/coletor-onibus/.env
+ExecStart=/opt/coletor-onibus/.venv/bin/python -m compactacao.limpar
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/dados /var/log/coletor-onibus
+
+[Install]
+WantedBy=multi-user.target
