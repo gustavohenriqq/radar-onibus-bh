@@ -195,6 +195,69 @@ arquivo, porque apagar durante a verificação deixaria meia hora apagada quando
 o arquivo divergente aparece no meio da lista. Modo `--seco` mostra o que seria
 apagado sem apagar.
 
+## O que foi descartado, com a evidência
+
+Cada alternativa abaixo foi medida no dado real antes de ser descartada.
+
+### Coletar com intervalo maior que 30 s
+
+A auditoria mostrou 40,1% de registros repetidos no pico, o que sugeria coletar
+com menos frequência. Simulado nas horas já compactadas de 15/09/2026, pegando
+uma coleta a cada duas (60 s) e a cada três (90 s):
+
+| Hora (BH) | Intervalo | Posições únicas | Perdidas | Disco compactado | Intervalo mediano entre posições do mesmo ônibus |
+|---|---|---|---|---|---|
+| 07h, pico | **30 s** | **141.758** | 0 | 2,16 MB | **45 s** |
+| 07h, pico | 60 s | 111.892 | 21,1% | 1,79 MB | 60 s |
+| 07h, pico | 90 s | 76.050 | 46,4% | 1,30 MB | 91 s |
+| 11h | **30 s** | **95.843** | 0 | 1,50 MB | **45 s** |
+| 11h | 60 s | 70.261 | 26,7% | 1,16 MB | 61 s |
+| 11h | 90 s | 47.967 | 50,0% | 0,85 MB | 91 s |
+| 02h | **30 s** | **4.547** | 0 | 0,08 MB | **31 s** |
+| 02h | 60 s | 2.626 | 42,2% | 0,05 MB | 61 s |
+
+Base dos percentuais: posições únicas `(vehicle_id, timestamp)` capturadas a
+30 s na mesma hora. 45 s não foi simulado porque não cai no grid de coleta.
+
+**Por que ficou em 30 s:**
+
+- A troca é ruim: coletar a 60 s perde de 21% a 27% das posições únicas nas
+  horas de operação para economizar de 17% a 23% de disco já compactado.
+- Repetição não é desperdício puro. Parte das coletas "repetidas" traz posição
+  nova de outros veículos, e o zstd elimina quase todo o custo das que de fato
+  se repetem.
+- A pergunta do projeto é sobre intervalo entre ônibus. A resolução de 45 s por
+  veículo pioraria para 60 s justamente na métrica que a análise quer medir.
+- A decisão é assimétrica: dado coletado pode ser descartado na Silver; dado
+  não coletado não volta.
+
+### Parquet decodificado no Bronze
+
+Medido numa hora de pico (120 coletas, 233.306 registros):
+
+| Formato | Tamanho | Contagem por `route_id` | Preserva o byte cru |
+|---|---|---|---|
+| 120 arquivos `.pb.gz` (antes) | 8,94 MB | 1,77 s | sim |
+| **Contêiner zstd (escolhido)** | **2,16 MB** | 1,34 s | **sim** |
+| Parquet decodificado, 17 colunas, zstd | 2,89 MB | 0,25 s | não |
+| Parquet com o protobuf em coluna binária | 4,84 MB | 1,20 s | sim |
+| `tar` dos arquivos `.pb.gz` | 9,15 MB | não medido | sim |
+
+O Parquet decodificado responde consulta cinco vezes mais rápido, mas obriga a
+escolher hoje quais campos do feed importam, e campo novo que a operadora passe
+a enviar seria descartado sem aviso. Consulta rápida é papel da Silver em Delta.
+O Parquet com coluna binária preserva o bruto e é lido nativamente pelo Spark,
+mas ocupa 2,2 vezes o contêiner sem ganho de leitura, porque o protobuf ainda
+precisa ser decodificado. O `tar` não compacta nada: os arquivos já estão em
+gzip, e o gzip por arquivo não enxerga a redundância entre coletas vizinhas.
+
+### Deduplicar na coleta ou na compactação
+
+Descartado por princípio, não por custo: o Bronze guarda o que a API devolveu,
+inclusive a repetição, que é informação sobre a fonte (é dela que saiu a
+medida de idade das posições). A deduplicação por `(vehicle_id, timestamp)`
+fica na Silver, com `MERGE`, onde é versionada e testável.
+
 ## Rodando localmente
 
 Windows (PowerShell):
