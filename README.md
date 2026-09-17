@@ -85,7 +85,7 @@ feed GTFS-RT (a cada 30 s)
    /dados/bronze/vehicle_positions/dt=AAAA-MM-DD/hh=HH/AAAAMMDDTHHMMSSZ.pb.gz
         |
    vigia (systemd timer, 5 min) -> alerta local se 10 min sem arquivo novo
-   ping externo (healthchecks)  -> e-mail e Telegram se parar de gravar,
+   ping externo (healthchecks)  -> e-mail, Telegram e SMS se parar de gravar,
                                    inclusive com a VM inteira fora do ar
 ```
 
@@ -314,6 +314,17 @@ Duas camadas, porque cada uma cobre o que a outra não vê:
 |---|---|---|---|
 | Ping externo (healthchecks.io) | fora da VM | nenhum arquivo gravado em 1 min + 10 min de tolerância | sim |
 | Vigia local (systemd timer, 5 min) | na VM | mais de 10 min sem arquivo novo; também 401/403 e falha de disco pelo coletor. Hoje só registra no log: o envio ao Telegram exige `TELEGRAM_BOT_TOKEN`, não configurado | não |
+
+Canais por check, cada um testado com notificação real:
+
+| Check | Período e tolerância | E-mail | Telegram | SMS |
+|---|---|---|---|---|
+| `coletor-onibus-bh` | 1 min + 10 min | sim | sim | **sim** |
+| `compactacao-horaria` | 1 h + 30 min | sim | sim | não |
+
+SMS só no coletor porque os créditos são limitados e a queda do coletor é a
+única falha que perde dado para sempre. A compactação é reprocessável: se
+parar, o backfill recupera tudo quando voltar.
 
 O coletor só pinga **depois de gravar um arquivo**, não a cada tentativa. Assim
 o ping mede o resultado que importa: um coletor vivo que recebe 401 e não grava
