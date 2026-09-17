@@ -142,7 +142,7 @@ hora fechada num único contêiner:
         |  compactacao.compactar (timer horário, minuto 20)
         v
 /dados/bronze_horario/vehicle_positions/dt=2026-09-15/vp_20260915T10.pb.zst
-/dados/bronze_horario/vehicle_positions/dt=2026-09-15/vp_20260915T10.json
+/dados/bronze_horario/vehicle_positions/dt=2026-09-15/vp_20260915T10.pb.json
         |  compactacao.limpar (diário, quarentena de 48 h)
         v
 originais apagados, só depois de conferidos hash a hash
