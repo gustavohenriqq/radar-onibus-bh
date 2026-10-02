@@ -16,7 +16,7 @@ A pergunta que o projeto vai responder:
 |---|---|---|
 | **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**, com alerta externo |
 | **1. Bronze e compactação** | Job horário, consolidação do bruto | **no ar desde 16/09/2026** |
-| 2. Silver em Delta | PySpark, deduplicação com MERGE, headway | aguarda 4 semanas de dado |
+| 2. Silver em Delta | PySpark, deduplicação com MERGE, headway | pronta para começar: 18 dias acumulados |
 | 3. Gold e dbt | Métricas por linha, corredor e faixa horária | |
 | 4. Análise | Conclusão com recomendação numérica | |
 | 5. ML | Previsão de chegada e detecção de *bus bunching* | |
@@ -43,36 +43,73 @@ Duas coisas que só apareceram medindo:
   a cada 30 s, parte das coletas repete a anterior. O coletor marca isso no log
   pelo SHA-256, e a deduplicação por `(vehicle_id, timestamp)` fica na camada
   silver.
-- **A API falha.** Nos primeiros dois minutos de coleta houve um
-  `ConnectionError`. O backoff esperou 30 s e a coleta seguinte voltou normal.
+- **A API falha, e com frequência mensurável.** Em 18 dias houve 5 episódios,
+  todos de `ReadTimeout`, mais um `HTTP 502`. Duram de 45 s a 4 min e se
+  resolvem sozinhos. O backoff cobre todos.
 - **O volume depende do horário.** O arquivo encolhe cerca de 40% entre o fim
   da tarde e a noite, porque há menos ônibus rodando. Por isso a estimativa de
   disco só será publicada com um dia inteiro coletado, não extrapolada de uma
   medida de pico.
 
-## Auditoria de 25 horas de coleta (16/09/2026)
+## Auditoria de 18 dias em produção (02/10/2026)
 
-Números medidos na VM, não estimados:
+Números medidos na VM, não estimados. Período de 14/09 23h a 02/10 23h UTC:
 
 | Medida | Valor |
 |---|---|
-| Cobertura da linha do tempo | **99,93%** (3.032 arquivos em 25,27 h) |
-| Dia 15/09 completo | **2.880 de 2.880 coletas, 100%** |
-| Lacunas | 1, de 90 s, causada por um reboot de teste |
-| Arquivos corrompidos (`gzip -t` em todos) | 0 |
-| Falhas de coleta no log | 0 em 3.032 |
-| Latência da API | mediana 466 ms, p90 584 ms, p99 698 ms |
-| Amostra decodificada (288 arquivos) | 288 válidos, 0 registros sem `route_id` ou posição |
-| Veículos por coleta | média diária 1.081, mínimo 32 (02h), máximo 2.057 (07h) |
-| Volume bruto | 121,6 MB/dia, 3,61 GB/mês |
+| Horas com dado | **433 de 433**, nenhuma hora vazia |
+| Coletas gravadas | **51.772** |
+| **Cobertura** | **99,934%** das 51.720 coletas esperadas nas 431 horas inteiras |
+| Coletas perdidas | 34, concentradas em 5 episódios |
+| Reinícios do serviço por falha | **0** |
+| Falhas de compactação | **0** em 432 horas consolidadas |
+| Falhas de limpeza | **0** |
+| Arquivos corrompidos | 0 (`gzip -t` em todos os 3.033 da primeira auditoria; depois, conferência por SHA-256 de cada coleta antes de apagar) |
+| Alertas falsos | 0 |
 
-**Deduplicação, medida:** a posição de cada veículo chega com idade mediana de
-45 s e p90 de 82 s, mais lenta que a coleta de 30 s. Contando chaves
-`(vehicle_id, timestamp)` distintas, **40,1% dos registros no pico da manhã
-são repetição de coletas anteriores** (base: total de registros lidos numa
-janela de 30 min), e 17,5% na madrugada. A projeção inicial do projeto era de
-131 milhões de linhas por mês; o número real, após deduplicação, fica em torno
-de **58,7 milhões**.
+### Os 5 episódios de falha, todos da API
+
+| Quando (UTC) | Duração | Coletas perdidas | Causa |
+|---|---|---|---|
+| 18/09 09:06 | ~2 min | 8 | `ReadTimeout` |
+| 23/09 03:41 | ~2 min | 8 | `ReadTimeout`, depois um `HTTP 502` |
+| 27/09 00:40 | 45 s | 1 | `ConnectionError` |
+| 28/09 07:08 | ~4 min | 9 | `ReadTimeout` |
+| 02/10 03:40 | ~2 min | 8 | `ReadTimeout` |
+
+Nenhuma falha foi do coletor: em todos os casos a API parou de responder e
+voltou sozinha. **Parte da perda é do próprio backoff**, que é a decisão certa
+mas tem custo visível: o log registra 14 tentativas que falharam, e as outras
+20 coletas se perderam enquanto o backoff esperava 60 s, 120 s e 240 s antes de
+tentar de novo. É o preço de não martelar uma API pública que já está com
+problema.
+
+O reinício do dia 01/10 às 06:05 UTC não foi falha: o `unattended-upgrades` do
+Ubuntu reexecutou o systemd, o coletor parou de forma limpa pelo `SIGTERM` e
+voltou 4 segundos depois, **sem perder nenhuma coleta**.
+
+### Volume real, por dia da semana
+
+| Dia | Tamanho consolidado |
+|---|---|
+| Terça a sexta | 30,1 a 32,3 MB |
+| Sábado | 18,3 a 19,3 MB |
+| **Domingo** | **11,4 a 11,6 MB** |
+
+Domingo tem cerca de **36% do volume de um dia útil**, o que é a frota reduzida
+aparecendo no tamanho do arquivo. A média dos 17 dias completos é de **27,5 MB
+por dia**, ou **0,82 GB por mês**, bem abaixo dos 2,2 GB/mês estimados no
+projeto antes de existir medição. No volume de 100 GB, isso dá mais de **9 anos**
+de histórico.
+
+### Deduplicação, medida
+
+A posição de cada veículo chega com idade mediana de 45 s e p90 de 82 s, mais
+lenta que a coleta de 30 s. Contando chaves `(vehicle_id, timestamp)`
+distintas, **40,1% dos registros no pico da manhã são repetição de coletas
+anteriores** (base: total de registros lidos numa janela de 30 min), e 17,5% na
+madrugada. A projeção inicial do projeto era de 131 milhões de linhas por mês;
+o número real, após deduplicação, fica em torno de **58,7 milhões**.
 
 ## Arquitetura da fase 0
 
@@ -126,6 +163,11 @@ status 200 não é dado e não pode fingir ser feed.
 **Vigia em processo separado.** Checagem dentro do coletor morre junto com ele.
 O vigia mede o resultado que importa: arquivo novo no disco.
 
+**Falha de ping nunca derruba a coleta.** Em 18 dias, 23 pings ao serviço de
+monitoramento falharam por timeout, contra 14 coletas que falharam. Como o ping
+só é tentado depois do arquivo já estar gravado, e a exceção é capturada, essas
+falhas não custaram nenhum dado nem geraram alerta falso.
+
 **Ping externo, além do vigia.** O vigia roda na mesma VM; se a VM cair, ele cai
 junto. Um serviço externo que alerta quando os pings param cobre esse caso, e
 foi o que tornou opcional o bot de Telegram próprio: o serviço externo já
@@ -148,10 +190,12 @@ hora fechada num único contêiner:
 originais apagados, só depois de conferidos hash a hash
 ```
 
-**Resultado medido em 39 horas reais:** de 121,6 MB para **32 MB por dia**, uma
-redução de **74%**, e o dia inteiro passa de 2.880 arquivos para 24. Projetado
-para o mês: **0,95 GB** em vez de 3,61 GB, o que estende a autonomia do disco
-de 27 meses para mais de 8 anos.
+**Resultado medido em 432 horas consolidadas, sem nenhuma falha:** um dia útil
+sai de 121,6 MB em 2.880 arquivos para **cerca de 31 MB em 24 arquivos**, uma
+redução de **74%**. Na média dos 17 dias completos, incluindo fins de semana,
+são **27,5 MB por dia**, ou **0,82 GB por mês**. O lake inteiro de 18 dias ocupa
+**504 MB em 432 contêineres**, contra os 87,7 mil arquivos por mês que o layout
+original geraria.
 
 ### O formato do contêiner
 
@@ -288,13 +332,15 @@ separado do disco de boot, montado em `/dados`.
 | `.env` | `root:coletor`, modo 640 | Segredos legíveis só pelo serviço |
 | Swap | 1 GB, `swappiness=10` | Com 1 GB de RAM, sem swap o kernel mata processo quando a memória acaba |
 
-Testado em 14/09/2026, antes de acumular dado:
+Testado em 14/09/2026, antes de acumular dado, e confirmado em produção depois:
 
 | Teste | Resultado |
 |---|---|
-| 18 testes na VM (Python 3.12.3) | todos passando |
+| 36 testes, no Windows e na VM (Python 3.12.3) | todos passando |
 | `kill -9` no coletor | reiniciado em ~10 s, nenhuma coleta perdida |
 | Reboot da VM | volume montou, coletor e vigia voltaram; 2 coletas perdidas durante o boot |
+| Queda simulada do ping (16/09) | alerta `DOWN` em 11 min no Telegram e no e-mail, sem perder coleta |
+| `unattended-upgrades` reiniciando o serviço (01/10, não planejado) | parada limpa pelo `SIGTERM` e volta em 4 s, **sem perder coleta** |
 
 Instalação das units:
 
@@ -338,7 +384,13 @@ nada também para de pingar e dispara o alerta.
   cobrança por uso foi solicitada em 14/09/2026 (sem custo enquanto só usa
   recursos Always Free, com alerta de orçamento); relatos no fórum do provedor
   dizem que contas pagas ficam fora dessa regra, mas a documentação oficial não
-  confirma. O ping externo é a garantia real.
+  confirma. Até 02/10/2026 a VM atravessou duas janelas de 7 dias sem ser
+  tocada, o que é evidência a favor, não garantia. O ping externo continua
+  sendo a defesa real.
+- **Dependência de uma API de terceiro.** Os 5 episódios de falha em 18 dias
+  foram todos do lado do fornecedor. Nenhum passou de 4 minutos, mas uma queda
+  longa custaria dado que não volta. É o que torna a segunda fonte (SPTrans) um
+  plano de contingência, e não enfeite.
 - **Sem backup do volume.** As políticas prontas de backup acumulam mais que os
   5 backups gratuitos. A proteção planejada é copiar o Parquet compactado da
   fase 1 para fora da VM.
