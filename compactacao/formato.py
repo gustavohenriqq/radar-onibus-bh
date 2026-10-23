@@ -33,14 +33,18 @@ from typing import Iterator
 
 import zstandard as zstd
 
+from coletor.armazenamento import comprimir
+
 MAGIC = b"VPBH1\n"
 TAM_NOME = 16  # 20260915T100000Z
 NIVEL_PADRAO = 10
 
 
 def reconstruir_gz(protobuf: bytes) -> bytes:
-    """Recria o .pb.gz original a partir do protobuf cru."""
-    return gzip.compress(protobuf, compresslevel=6, mtime=0)
+    """Recria o .pb.gz original a partir do protobuf cru, com a mesma funcao
+    que o coletor usa para gravar: assim a reconstrucao bate em qualquer
+    sistema operacional, nao so na VM."""
+    return comprimir(protobuf)
 
 
 def sha256_arquivo(caminho: Path) -> str:

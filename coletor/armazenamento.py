@@ -15,7 +15,8 @@ Decisoes:
   small files que mata leitura em Spark. Isso e aceito aqui de proposito:
   gravar pequeno e seguro (uma coleta com problema afeta so o proprio
   arquivo), ler pequeno e lento. A compactacao horaria da fase 1 junta a hora
-  fechada num unico Parquet. Cada responsabilidade num processo.
+  fechada num unico conteiner zstd (compactacao/formato.py). Cada
+  responsabilidade num processo.
 """
 
 from __future__ import annotations
@@ -36,6 +37,25 @@ def caminho_arquivo(dir_bronze: Path, instante: datetime) -> Path:
     )
 
 
+# Byte 9 do cabecalho gzip, o "sistema operacional". A zlib grava 03 (Unix) no
+# Linux e 0a no Windows. Todo o Bronze foi gravado na VM Linux, com 03.
+OS_UNIX = 3
+
+
+def comprimir(conteudo: bytes) -> bytes:
+    """gzip deterministico e independente de plataforma.
+
+    mtime=0 tira o horario do cabecalho, e o byte de sistema operacional fica
+    fixo em Unix. Sem isso, a mesma resposta comprimida no Windows saia com um
+    byte diferente, e a prova de que o backup reconstroi o original byte a
+    byte so valia dentro da VM. Achado no primeiro teste de restauracao fora
+    dela, em 23/10/2026.
+    """
+    comprimido = bytearray(gzip.compress(conteudo, compresslevel=6, mtime=0))
+    comprimido[9] = OS_UNIX
+    return bytes(comprimido)
+
+
 def gravar_atomico(destino: Path, conteudo: bytes) -> int:
     """Grava `conteudo` comprimido em `destino` e devolve os bytes gravados.
 
@@ -50,9 +70,7 @@ def gravar_atomico(destino: Path, conteudo: bytes) -> int:
         raise FileExistsError(f"arquivo bronze ja existe: {destino}")
     destino.parent.mkdir(parents=True, exist_ok=True)
 
-    # mtime=0 deixa o gzip deterministico: a mesma resposta gera o mesmo
-    # arquivo, byte a byte. Facilita auditar repeticoes por hash.
-    comprimido = gzip.compress(conteudo, compresslevel=6, mtime=0)
+    comprimido = comprimir(conteudo)
 
     temporario = destino.with_name(f".{destino.name}.tmp")
     with open(temporario, "wb") as f:

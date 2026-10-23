@@ -1,0 +1,25 @@
+[Unit]
+Description=Copia os conteineres horarios para o bucket de backup, fora da VM
+RequiresMountsFor=/dados
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=coletor
+Group=coletor
+WorkingDirectory=/opt/coletor-onibus
+EnvironmentFile=/opt/coletor-onibus/.env
+ExecStart=/opt/coletor-onibus/.venv/bin/python -m backup.enviar
+# Mesma prioridade baixa da compactacao: coleta atrasada e dado perdido,
+# backup atrasado nao e. O envio e em streaming, sem carregar arquivo inteiro.
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/dados /var/log/coletor-onibus
+
+[Install]
+WantedBy=multi-user.target

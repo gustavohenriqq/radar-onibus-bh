@@ -15,7 +15,7 @@ A pergunta que o projeto vai responder:
 | Fase | Entrega | Situação |
 |---|---|---|
 | **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**, com alerta externo |
-| **1. Bronze e compactação** | Job horário, consolidação do bruto | **no ar desde 16/09/2026** |
+| **1. Bronze e compactação** | Job horário, consolidação do bruto e backup fora da VM | **no ar desde 16/09/2026**; backup desde 23/10/2026 |
 | 2. Silver em Delta | PySpark, deduplicação com MERGE, headway | pronta para começar: 18 dias acumulados |
 | 3. Gold e dbt | Métricas por linha, corredor e faixa horária | |
 | 4. Análise | Conclusão com recomendação numérica | |
@@ -214,6 +214,9 @@ enviar. O Bronze guarda o que a fonte devolveu; quem decodifica é a Silver.
 `mtime=0`, que é determinístico, então o `.pb.gz` original é reconstruído byte
 a byte a partir do contêiner. Verificado em 60 arquivos espalhados por um dia
 (60 de 60 com SHA-256 idêntico) e, na primeira execução real, em 4.574 coletas.
+O byte de sistema operacional do cabeçalho gzip é fixado em Unix (`03`): a zlib
+do Windows grava `0a`, e sem essa fixação a reconstrução só batia dentro da VM.
+Isso apareceu no primeiro teste de restauração feito fora dela.
 
 ### Idempotência e backfill
 
@@ -238,6 +241,61 @@ antes. A conferência é feita para a hora inteira **antes** de apagar qualquer
 arquivo, porque apagar durante a verificação deixaria meia hora apagada quando
 o arquivo divergente aparece no meio da lista. Modo `--seco` mostra o que seria
 apagado sem apagar.
+
+## Backup fora da VM
+
+Os originais são apagados 48 h depois de compactados, então os contêineres são
+a única cópia do histórico. Desde 23/10/2026 um job de hora em hora copia cada
+contêiner e seu manifesto para um bucket de Object Storage do mesmo provedor:
+
+```
+/dados/bronze_horario/.../vp_20260915T10.pb.zst  (+ .pb.json)
+        |  backup.enviar (timer horário, minuto 45; hora fechada há 2 h)
+        v
+bucket radar-onibus-backup, mesmo caminho como nome do objeto
+        |  backup.restaurar --dia AAAA-MM-DD (de qualquer máquina)
+        v
+contêineres conferidos e, com --originais, os .pb.gz por coleta
+```
+
+**O que só conta como feito.** O job lê cada objeto de volta do bucket e
+compara o SHA-256 com o do manifesto. Status 200 no envio não prova o que ficou
+gravado. O estado local guarda o que já foi conferido, então rodar de novo não
+reenvia nada; se o estado se perder, o job tenta de novo, o bucket recusa e ele
+confere o que já está lá.
+
+**Quem toma a VM não destrói o backup.** O acesso é por URL pré-autenticada,
+sem SDK nem chave de API na VM. Ela lê e grava, mas a documentação do provedor
+diz que esse tipo de URL não apaga objetos, e o bucket tem uma regra de
+retenção indefinida que impede sobrescrever. Testado em 23/10/2026:
+
+| Tentativa pela URL da VM | Resposta |
+|---|---|
+| Sobrescrever um objeto existente | `403 RetentionRuleViolation` |
+| Apagar um objeto | recusado |
+
+A regra de retenção não foi travada de propósito: travar é irreversível, nem o
+dono da conta consegue remover depois. Sem trava, ela só sai pelo console.
+
+**Medido na primeira execução:**
+
+| Medida | Valor |
+|---|---|
+| Horas enviadas e conferidas | 927, de 14/09 a 23/10/2026, 0 falhas |
+| Tempo | 4 min 23 s, com 21 s de CPU e prioridade baixa de CPU e disco |
+| Efeito no coletor | nenhum aviso no log e o mesmo processo antes e depois |
+
+**Restauração testada.** O dia 15/09/2026, cujos originais já tinham sido
+apagados da VM, foi restaurado do bucket num PC Windows: 24 horas e **2.880 de
+2.880 coletas** reconstruídas byte a byte, conferidas contra o SHA-256 que o
+manifesto guardou antes de o original ser apagado.
+
+**Cota gratuita.** Em conta paga, o provedor dá 10 GB grátis por tier (Standard,
+Infrequent Access e Archive) e 50 mil requisições por mês. O job gasta 4
+requisições por hora (2 envios e 2 leituras de conferência), cerca de 2.900 por
+mês. A 0,82 GB por mês, o Standard enche por volta de setembro de 2027; antes
+disso, uma regra de ciclo de vida move o antigo para Archive, que é grátis até
+mais 10 GB e serve para restauração de desastre, mesmo levando horas.
 
 ## O que foi descartado, com a evidência
 
@@ -295,6 +353,24 @@ mas ocupa 2,2 vezes o contêiner sem ganho de leitura, porque o protobuf ainda
 precisa ser decodificado. O `tar` não compacta nada: os arquivos já estão em
 gzip, e o gzip por arquivo não enxerga a redundância entre coletas vizinhas.
 
+### Destino do backup
+
+Limites conferidos nas páginas oficiais em 23/10/2026:
+
+| Destino | Grátis | Conta nova | Fora do provedor da VM |
+|---|---|---|---|
+| **Object Storage do mesmo provedor (escolhido)** | 10 GB por tier, 50 mil requisições/mês | não | não |
+| Cloudflare R2 | 10 GB-mês | sim | sim |
+| Backblaze B2 | primeiros 10 GB | sim | sim |
+| Azure for Students | crédito anual, renovável enquanto estudante | sim | sim |
+| Backup do block volume | 5 backups | não | não |
+
+O escolhido resolve o risco que motivou o backup, que é o volume falhar, sem
+conta nova, sem SDK na VM de 1 GB e com proteção contra sobrescrita. O que ele
+não cobre é a perda da conta inteira, porque primário e cópia ficam no mesmo
+provedor. Esse risco fica registrado abaixo; a segunda cópia fora do provedor
+vem com a fase 2, que já grava no Azure.
+
 ### Deduplicar na coleta ou na compactação
 
 Descartado por princípio, não por custo: o Bronze guarda o que a API devolveu,
@@ -348,6 +424,7 @@ Instalação das units:
 sudo cp deploy/*.service deploy/*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now coletor-onibus.service coletor-onibus-vigia.timer
+sudo systemctl enable --now coletor-onibus-compactacao.timer coletor-onibus-limpeza.timer coletor-onibus-backup.timer
 journalctl -u coletor-onibus -f          # acompanhar as coletas
 systemctl list-timers coletor-onibus-vigia.timer
 ```
@@ -367,10 +444,12 @@ Canais por check, cada um testado com notificação real:
 |---|---|---|---|---|
 | `coletor-onibus-bh` | 1 min + 10 min | sim | sim | **sim** |
 | `compactacao-horaria` | 1 h + 30 min | sim | sim | não |
+| `backup-horario` | 1 h + 2 h | sim | sim | não |
 
 SMS só no coletor porque os créditos são limitados e a queda do coletor é a
-única falha que perde dado para sempre. A compactação é reprocessável: se
-parar, o backfill recupera tudo quando voltar.
+única falha que perde dado para sempre. A compactação e o backup são
+reprocessáveis: se pararem, o backfill recupera tudo quando voltarem, e o dado
+continua na VM enquanto isso.
 
 O coletor só pinga **depois de gravar um arquivo**, não a cada tentativa. Assim
 o ping mede o resultado que importa: um coletor vivo que recebe 401 e não grava
@@ -384,16 +463,18 @@ nada também para de pingar e dispara o alerta.
   cobrança por uso foi solicitada em 14/09/2026 (sem custo enquanto só usa
   recursos Always Free, com alerta de orçamento); relatos no fórum do provedor
   dizem que contas pagas ficam fora dessa regra, mas a documentação oficial não
-  confirma. Até 02/10/2026 a VM atravessou duas janelas de 7 dias sem ser
+  confirma. A migração foi concluída sem cobrança. Até 02/10/2026 a VM atravessou duas janelas de 7 dias sem ser
   tocada, o que é evidência a favor, não garantia. O ping externo continua
   sendo a defesa real.
 - **Dependência de uma API de terceiro.** Os 5 episódios de falha em 18 dias
   foram todos do lado do fornecedor. Nenhum passou de 4 minutos, mas uma queda
   longa custaria dado que não volta. É o que torna a segunda fonte (SPTrans) um
   plano de contingência, e não enfeite.
-- **Sem backup do volume.** As políticas prontas de backup acumulam mais que os
-  5 backups gratuitos. A proteção planejada é copiar o Parquet compactado da
-  fase 1 para fora da VM.
+- **Backup no mesmo provedor.** O backup cobre falha do volume e da VM, mas não
+  a perda da conta inteira. A segunda cópia, fora do provedor, vem com a fase 2.
+- **Cota gratuita do backup.** O tier Standard enche por volta de setembro de
+  2027. Antes disso é preciso criar a regra de ciclo de vida para o Archive,
+  senão o excedente passa a ser cobrado.
 
 ## Estrutura
 
@@ -410,8 +491,12 @@ compactacao/
   horas.py           quais horas fecharam e quais faltam compactar
   compactar.py       job horário, idempotente e com backfill
   limpar.py          apaga originais já compactados, com quarentena
-deploy/              units do systemd (coletor, vigia, compactação e limpeza)
-tests/               36 testes: coletor, vigia, formato, idempotência e limpeza
+backup/
+  remoto.py          leitura e escrita no bucket por URL pré-autenticada
+  enviar.py          job horário: envia, lê de volta e confere o SHA-256
+  restaurar.py       restaura e confere um dia inteiro, de qualquer máquina
+deploy/              units do systemd (coletor, vigia, compactação, limpeza e backup)
+tests/               46 testes: coletor, vigia, formato, idempotência, limpeza e backup
 ```
 
 ## Agradecimento

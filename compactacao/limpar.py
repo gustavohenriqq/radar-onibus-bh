@@ -9,8 +9,8 @@ e so depois ligar este.
 
 Duas travas, nesta ordem:
 
-1. Quarentena. So entra hora cujo conteiner tem mais de N horas (48 por
-   padrao). Custa ~240 MB de disco e e o seguro contra um bug que so aparece
+1. Quarentena. So entra hora encerrada ha mais de N horas (48 por padrao),
+   contadas do fim da hora coletada, nao da criacao do conteiner. Custa ~240 MB de disco e e o seguro contra um bug que so aparece
    no dia seguinte.
 2. Conferencia no momento de apagar. Reconstroi cada coleta a partir do
    conteiner e compara o SHA-256 com o arquivo original que ainda esta no
