@@ -1,0 +1,189 @@
+version: 2
+
+models:
+  - name: fct_headway_parada_faixa
+    description: Headway, irregularidade e espera por linha, sentido, parada, dia e faixa.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [route_id, direction_id, stop_id, data_bh, faixa_horaria]
+    columns:
+      - name: headways
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 1
+                maximo: 2000
+      - name: headway_medio_min
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 180
+      - name: cv_headway
+        data_tests:
+          - not_null:
+              config:
+                where: "headway_medio_min > 0"
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 10
+      - name: espera_estimada_min
+        description: Limite de 90 min porque nenhum headway valido passa de 180 min.
+        data_tests:
+          - not_null:
+              config:
+                where: "headway_medio_min > 0"
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 90
+      - name: espera_excesso_min
+        data_tests:
+          - not_null:
+              config:
+                where: "headway_medio_min > 0"
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 90
+
+  - name: fct_servico_linha_faixa
+    description: Media entre paradas das metricas de servico, por linha, sentido, dia e faixa.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [route_id, direction_id, data_bh, faixa_horaria]
+    columns:
+      - name: faixa_horaria
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [madrugada, inicio_manha, pico_manha, entre_picos, pico_tarde, noite]
+      - name: tipo_dia
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [dia_util, sabado, domingo_feriado]
+      - name: paradas
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 1
+                maximo: 300
+      - name: headway_medio_min
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 180
+      - name: cv_headway
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 10
+      - name: espera_estimada_min
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 90
+      - name: espera_regular_min
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 90
+      - name: espera_excesso_min
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 90
+      - name: alta_frequencia
+        data_tests: [not_null]
+
+  - name: fct_qualidade_diaria
+    description: Quantas passagens e headways entraram e sairam do calculo, por dia.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [data_bh]
+    columns:
+      - name: cobertura_passagens
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 1
+
+unit_tests:
+  - name: formulas_da_espera_com_resposta_conhecida
+    description: >
+      Headways de 10 e 30 min. Media 20, E[H^2] 500 min2, CV 0,5,
+      espera estimada 12,5, regular 10, excesso 2,5.
+    model: fct_headway_parada_faixa
+    given:
+      - input: ref('int_headways')
+        rows:
+          - {route_id: r1, direction_id: 0, stop_id: p1, data_bh: 2026-10-20, hora_bh: 7, headway_s: 600.0, headway_valido: true}
+          - {route_id: r1, direction_id: 0, stop_id: p1, data_bh: 2026-10-20, hora_bh: 8, headway_s: 1800.0, headway_valido: true}
+          - {route_id: r1, direction_id: 0, stop_id: p1, data_bh: 2026-10-20, hora_bh: 8, headway_s: 99999.0, headway_valido: false}
+      - input: ref('faixa_horaria')
+        rows:
+          - {hora_bh: 7, faixa_horaria: pico_manha, ordem_faixa: 3}
+          - {hora_bh: 8, faixa_horaria: pico_manha, ordem_faixa: 3}
+    expect:
+      rows:
+        - {stop_id: p1, faixa_horaria: pico_manha, headways: 2, headway_medio_min: 20.0, cv_headway: 0.5, espera_estimada_min: 12.5, espera_regular_min: 10.0, espera_excesso_min: 2.5}
+
+  - name: grupo_com_media_zero_fica_com_metricas_nulas
+    description: >
+      Dois onibus informaram a passagem no mesmo instante e o unico headway do grupo
+      e zero. A linha continua no mart, para nenhum headway sumir, e o que divide
+      pela media sai nulo.
+    model: fct_headway_parada_faixa
+    given:
+      - input: ref('int_headways')
+        rows:
+          - {route_id: r1, direction_id: 0, stop_id: p1, data_bh: 2026-10-20, hora_bh: 7, headway_s: 0.0, headway_valido: true}
+      - input: ref('faixa_horaria')
+        rows:
+          - {hora_bh: 7, faixa_horaria: pico_manha, ordem_faixa: 3}
+    expect:
+      rows:
+        - {stop_id: p1, headways: 1, headway_medio_min: 0.0, cv_headway: null, espera_estimada_min: null, espera_regular_min: 0.0, espera_excesso_min: null}
+
+  - name: linha_faz_media_entre_paradas_com_peso_igual
+    description: >
+      Parada com muitos headways nao pesa mais, e ficam de fora a parada com menos
+      de 3 e a de media zero. Sabado comum e feriado saem classificados.
+    model: fct_servico_linha_faixa
+    given:
+      - input: ref('fct_headway_parada_faixa')
+        rows:
+          - {route_id: r1, direction_id: 0, stop_id: p1, data_bh: 2026-10-24, faixa_horaria: pico_manha, ordem_faixa: 3, headways: 100, headway_medio_min: 10.0, cv_headway: 0.2, espera_estimada_min: 6.0, espera_regular_min: 5.0, espera_excesso_min: 1.0}
+          - {route_id: r1, direction_id: 0, stop_id: p2, data_bh: 2026-10-24, faixa_horaria: pico_manha, ordem_faixa: 3, headways: 3, headway_medio_min: 30.0, cv_headway: 0.4, espera_estimada_min: 18.0, espera_regular_min: 15.0, espera_excesso_min: 3.0}
+          - {route_id: r1, direction_id: 0, stop_id: p3, data_bh: 2026-10-24, faixa_horaria: pico_manha, ordem_faixa: 3, headways: 2, headway_medio_min: 99.0, cv_headway: 0.9, espera_estimada_min: 80.0, espera_regular_min: 49.5, espera_excesso_min: 30.5}
+          - {route_id: r1, direction_id: 0, stop_id: p4, data_bh: 2026-10-24, faixa_horaria: pico_manha, ordem_faixa: 3, headways: 4, headway_medio_min: 0.0, cv_headway: null, espera_estimada_min: null, espera_regular_min: 0.0, espera_excesso_min: null}
+          - {route_id: r2, direction_id: 0, stop_id: p1, data_bh: 2026-11-02, faixa_horaria: noite, ordem_faixa: 6, headways: 5, headway_medio_min: 10.0, cv_headway: 0.0, espera_estimada_min: 5.0, espera_regular_min: 5.0, espera_excesso_min: 0.0}
+      - input: ref('feriados')
+        rows:
+          - {data: 2026-11-02, nome: Finados}
+    expect:
+      rows:
+        - {route_id: r1, faixa_horaria: pico_manha, paradas: 2, headways: 103, headway_medio_min: 20.0, espera_estimada_min: 12.0, espera_regular_min: 10.0, espera_excesso_min: 2.0, tipo_dia: sabado, alta_frequencia: false}
+        - {route_id: r2, faixa_horaria: noite, paradas: 1, headways: 5, headway_medio_min: 10.0, espera_estimada_min: 5.0, espera_regular_min: 5.0, espera_excesso_min: 0.0, tipo_dia: domingo_feriado, alta_frequencia: true}
