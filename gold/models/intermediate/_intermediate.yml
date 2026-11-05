@@ -1,0 +1,196 @@
+version: 2
+
+models:
+  - name: int_mapa_parada
+    description: Parada mais vista em cada posicao da sequencia, por linha, sentido e letreiro.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [route_id, direction_id, letreiro, stop_sequence]
+    columns:
+      - name: stop_id
+        data_tests: [not_null]
+      - name: participacao
+        data_tests:
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 1
+
+  - name: int_passagens
+    description: Uma linha por parada que uma viagem deixou para tras, com o instante estimado.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [viagem_id, stop_sequence]
+    columns:
+      - name: viagem_id
+        data_tests: [not_null]
+      - name: passagem_unix
+        data_tests: [not_null]
+      - name: data_bh
+        data_tests: [not_null]
+      - name: hora_bh
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('faixa_horaria')
+                field: hora_bh
+      - name: motivo_exclusao
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [intervalo_longo, sem_mapa]
+
+  - name: int_feed_parado
+    description: Periodos sem nenhuma posicao nova em toda a frota.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [inicio_unix]
+    columns:
+      - name: inicio_unix
+        data_tests: [not_null]
+      - name: fim_unix
+        data_tests: [not_null]
+
+  - name: int_headways
+    description: Intervalo entre passagens consecutivas da mesma linha, sentido e parada.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [viagem_id, stop_sequence]
+    columns:
+      - name: stop_id
+        data_tests: [not_null]
+      - name: headway_s
+        description: Pode ser zero quando dois onibus passam no mesmo instante estimado.
+        data_tests:
+          - not_null
+          - entre:
+              arguments:
+                minimo: 0
+                maximo: 31536000
+      - name: headway_valido
+        data_tests: [not_null]
+      - name: atravessa_feed_parado
+        data_tests: [not_null]
+
+unit_tests:
+  - name: passagem_no_ponto_medio_e_salto_dividido_em_partes_iguais
+    model: int_passagens
+    given:
+      - input: ref('stg_posicoes')
+        rows:
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1000, stop_sequence: 5, stop_id: p5}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1060, stop_sequence: 6, stop_id: p6}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1150, stop_sequence: 9, stop_id: p9}
+      - input: ref('int_mapa_parada')
+        rows:
+          - {route_id: r1, direction_id: 0, letreiro: l, stop_sequence: 7, stop_id: p7}
+          - {route_id: r1, direction_id: 0, letreiro: l, stop_sequence: 8, stop_id: p8}
+    expect:
+      rows:
+        - {viagem_id: v1, stop_sequence: 5, stop_id: p5, passagem_unix: 1030.0, parada_do_mapa: false, motivo_exclusao: null}
+        - {viagem_id: v1, stop_sequence: 6, stop_id: p6, passagem_unix: 1075.0, parada_do_mapa: false, motivo_exclusao: null}
+        - {viagem_id: v1, stop_sequence: 7, stop_id: p7, passagem_unix: 1105.0, parada_do_mapa: true, motivo_exclusao: null}
+        - {viagem_id: v1, stop_sequence: 8, stop_id: p8, passagem_unix: 1135.0, parada_do_mapa: true, motivo_exclusao: null}
+
+  - name: recuo_de_sequencia_nao_repete_passagem
+    model: int_passagens
+    given:
+      - input: ref('stg_posicoes')
+        rows:
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1000, stop_sequence: 5, stop_id: p5}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1060, stop_sequence: 6, stop_id: p6}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1120, stop_sequence: 5, stop_id: p5}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1180, stop_sequence: 6, stop_id: p6}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1240, stop_sequence: 7, stop_id: p7}
+      - input: ref('int_mapa_parada')
+        rows:
+          - {route_id: r1, direction_id: 0, letreiro: l, stop_sequence: 6, stop_id: p6}
+    expect:
+      rows:
+        - {stop_sequence: 5, stop_id: p5, passagem_unix: 1030.0}
+        - {stop_sequence: 6, stop_id: p6, passagem_unix: 1210.0}
+
+  - name: buraco_longo_e_parada_sem_mapa_ficam_marcados
+    model: int_passagens
+    given:
+      - input: ref('stg_posicoes')
+        rows:
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1000, stop_sequence: 5, stop_id: p5}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1301, stop_sequence: 6, stop_id: p6}
+          - {viagem_id: v2, vehicle_id: b, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1000, stop_sequence: 5, stop_id: p5}
+          - {viagem_id: v2, vehicle_id: b, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1060, stop_sequence: 7, stop_id: p7}
+      - input: ref('int_mapa_parada')
+        rows:
+          - {route_id: r1, direction_id: 0, letreiro: x, stop_sequence: 6, stop_id: p6}
+    expect:
+      rows:
+        - {viagem_id: v1, stop_sequence: 5, stop_id: p5, motivo_exclusao: intervalo_longo}
+        - {viagem_id: v2, stop_sequence: 5, stop_id: p5, motivo_exclusao: null}
+        - {viagem_id: v2, stop_sequence: 6, stop_id: null, motivo_exclusao: sem_mapa}
+
+  - name: data_e_hora_da_passagem_em_horario_de_bh
+    description: 02:30 UTC de 21/10 ainda e 23:30 de 20/10 em BH.
+    model: int_passagens
+    given:
+      - input: ref('stg_posicoes')
+        rows:
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1792549770, stop_sequence: 5, stop_id: p5}
+          - {viagem_id: v1, vehicle_id: a, route_id: r1, direction_id: 0, letreiro: l, posicao_unix: 1792549830, stop_sequence: 6, stop_id: p6}
+      - input: ref('int_mapa_parada')
+        rows:
+          - {route_id: r1, direction_id: 0, letreiro: l, stop_sequence: 5, stop_id: p5}
+    expect:
+      rows:
+        - {stop_sequence: 5, data_bh: 2026-10-20, hora_bh: 23}
+
+  - name: headway_separa_parada_e_sentido_e_descarta_repeticao_do_onibus
+    model: int_headways
+    given:
+      - input: ref('int_passagens')
+        rows:
+          # Parada p1: a em 0, b em 600, b de novo em 700 (repeticao), c em 1200.
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 0.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 600.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb2, stop_sequence: 1, vehicle_id: b, passagem_unix: 700.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vc, stop_sequence: 1, vehicle_id: c, passagem_unix: 1200.0}
+          # Outro sentido e parada excluida nao entram na conta de p1.
+          - {route_id: r1, direction_id: 1, stop_id: p1, viagem_id: vd, stop_sequence: 1, vehicle_id: d, passagem_unix: 300.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: ve, stop_sequence: 1, vehicle_id: e, passagem_unix: 900.0, motivo_exclusao: intervalo_longo}
+          # Parada p2: intervalo acima de 180 min fica marcado como invalido.
+          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: va, stop_sequence: 2, vehicle_id: a, passagem_unix: 0.0}
+          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: vb, stop_sequence: 2, vehicle_id: b, passagem_unix: 10801.0}
+      - input: ref('int_feed_parado')
+        rows:
+          - {inicio_unix: 900000, fim_unix: 900600}
+    expect:
+      rows:
+        - {stop_id: p1, viagem_id: vb, headway_s: 600.0, headway_valido: true}
+        - {stop_id: p1, viagem_id: vc, headway_s: 600.0, headway_valido: true}
+        - {stop_id: p2, viagem_id: vb, headway_s: 10801.0, headway_valido: false}
+
+  - name: headway_que_atravessa_feed_parado_fica_invalido
+    description: >
+      Feed parado de 1000 a 1400 e de 2000 a 2400. O headway de p1 que cruza os dois
+      nao pode repetir a linha. Encostar no periodo sem atravessar nao conta.
+    model: int_headways
+    given:
+      - input: ref('int_passagens')
+        rows:
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 400.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 1000.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vc, stop_sequence: 1, vehicle_id: c, passagem_unix: 2500.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vd, stop_sequence: 1, vehicle_id: d, passagem_unix: 3100.0}
+      - input: ref('int_feed_parado')
+        rows:
+          - {inicio_unix: 1000, fim_unix: 1400}
+          - {inicio_unix: 2000, fim_unix: 2400}
+    expect:
+      rows:
+        - {viagem_id: vb, headway_s: 600.0, atravessa_feed_parado: false, headway_valido: true}
+        - {viagem_id: vc, headway_s: 1500.0, atravessa_feed_parado: true, headway_valido: false}
+        - {viagem_id: vd, headway_s: 600.0, atravessa_feed_parado: false, headway_valido: true}

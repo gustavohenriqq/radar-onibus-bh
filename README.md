@@ -17,7 +17,7 @@ A pergunta que o projeto vai responder:
 | **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**, com alerta externo |
 | **1. Bronze e compactação** | Job horário, consolidação do bruto e backup fora da VM | **no ar desde 16/09/2026**; backup desde 23/10/2026 |
 | **2. Silver em Delta** | PySpark, deduplicação com MERGE | **pronta em 05/11/2026**: 52 dias e 87,6 milhões de posições; roda sob demanda até a fase 6 |
-| 3. Gold e dbt | Headway e métricas por linha, corredor e faixa horária | |
+| **3. Gold e dbt** | Headway, irregularidade e espera por linha e faixa horária | **pronta em 05/11/2026**: 311 linhas, 49,5 milhões de headways, conferida por uma segunda conta; corredor ficou de fora |
 | 4. Análise | Conclusão com recomendação numérica | |
 | 5. ML | Previsão de chegada e detecção de *bus bunching* | |
 | 6. Orquestração | Airflow com backfill por janela de data | |
@@ -382,6 +382,62 @@ docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:de
 docker run --rm -e RADAR_DADOS_REAIS=/app/dados -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m pytest -q
 ```
 
+## Gold em dbt (fase 3)
+
+A Gold transforma posições em espera. Para cada linha, sentido, dia e faixa
+horária, mede de quanto em quanto tempo passa um ônibus, quão irregular é esse
+intervalo e quanto essa irregularidade custa a quem está no ponto. A regra
+completa, com o porquê de cada limite, está em [gold/README.md](gold/README.md).
+
+**Como funciona.** O feed só informa a próxima parada. Quando ela muda, o ônibus
+passou pela anterior, e o instante é estimado dentro do intervalo entre as duas
+posições. O headway é o tempo entre passagens de ônibus da mesma linha na mesma
+parada. Com ele vêm o coeficiente de variação e a espera estimada de quem chega ao
+acaso, `E[H²] / (2 E[H])`. A espera em excesso é a diferença para a mesma frota
+igualmente espaçada.
+
+**Onde roda.** dbt-spark no mesmo contêiner da Silver, na VM de processamento. As
+tabelas ficam em Delta no disco dessa VM, como a Silver. O build completo levou
+19 min.
+
+**Medido em 05/11/2026, de 15/09 a 04/11:**
+
+| Medida | Valor |
+|---|---|
+| Mart de leitura | 90.325 linhas, 311 linhas de ônibus |
+| Headways | 49.502.070, 97,2% válidos |
+| Espera em excesso média | 3,07 min por espera, com CV de 0,416 |
+| Pior e melhor faixa | madrugada 4,39 min, início da manhã 1,75 min |
+| Pico da tarde contra pico da manhã | 3,82 contra 2,18 min |
+
+**Como foi conferido.**
+
+- **Segunda conta.** `gold/conferencia.py` refaz o cálculo em Python puro a partir
+  da Silver. Em 3 linhas e 12 dias, 307 linhas do mart e 235.790 headways, deu 0
+  divergências.
+- **Testes.** 67 testes de dados (unicidade, nulos, faixa plausível e conciliação
+  entre camadas), 9 testes unitários dos modelos e 13 testes Python da conferência.
+- **Dado sujo conhecido vira aviso.** Os 3 GPS fora da região e a posição à frente
+  da coleta têm testes que avisam se aparecer um caso novo.
+
+**O que o dado mostrou.**
+
+- **O feed cai e o status continua 200.** Foram 16 quedas, de até 82 min, em que a
+  frota inteira parou de publicar. O headway que atravessa uma queda mede o feed,
+  não o serviço: tirá-los baixou a espera em excesso de 26/10 em 19%. O vigia atual
+  não percebe esse caso, que fica para o alerta de eventos.
+- **25 a 28/10 têm de 2,5 a 3 vezes mais buraco de GPS**, em 85% dos veículos e
+  em todas as horas, sem causa conhecida. Os números desses dias ficam, com o aviso.
+
+**Corredor ficou de fora.** Agrupar linhas por corredor pede a geometria das vias,
+que o feed em tempo real não traz.
+
+```bash
+docker build -f Dockerfile.gold -t radar-gold:dev .
+sh gold/rodar.sh seed
+sh gold/rodar.sh build
+```
+
 ## O que foi descartado, com a evidência
 
 Cada alternativa abaixo foi medida no dado real antes de ser descartada.
@@ -595,8 +651,10 @@ silver/
   decodificar.py     protobuf para linhas, sem confundir ausente com zero
   processar.py       job Spark: deduplicação, MERGE, OPTIMIZE e VACUUM
 deploy/              units do systemd (coletor, vigia, compactação, limpeza e backup)
+gold/                dbt: modelos, testes, seeds e a segunda conta (conferencia.py)
 Dockerfile.spark     imagem do Spark com Delta
-tests/               56 testes: coletor, vigia, formato, idempotência, limpeza, backup e Silver
+Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
+tests/               69 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver e Gold
 ```
 
 ## Agradecimento

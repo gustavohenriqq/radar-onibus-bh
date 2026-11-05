@@ -1,0 +1,20 @@
+-- Colunas explicitas sobre a Silver, so com o que a Gold usa.
+-- Filtra GPS fora da regiao de BH: a Silver mantem, a Gold nao calcula com ele.
+select
+    vehicle_id,
+    vehicle_ts,
+    unix_seconds(vehicle_ts) as posicao_unix,
+    data_bh,
+    route_id,
+    direction_id,
+    vehicle_label as letreiro,
+    trip_id,
+    start_date,
+    start_time,
+    concat_ws('|', vehicle_id, trip_id, start_date, start_time) as viagem_id,
+    current_stop_sequence as stop_sequence,
+    stop_id
+from {{ source('silver', 'posicoes') }}
+where data_bh between date'{{ var("data_inicio") }}' and date'{{ var("data_fim") }}'
+  and latitude between -20.6 and -19.4
+  and longitude between -44.6 and -43.4
