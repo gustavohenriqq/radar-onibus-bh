@@ -1,0 +1,12 @@
+# Contexto de build minimo: segredo e dado nunca vao para o daemon do Docker
+.env
+*.key
+*.pem
+BRIEF.md
+CLAUDE.md
+.git
+.venv
+dados
+logs
+**/__pycache__
+.pytest_cache

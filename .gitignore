@@ -16,3 +16,8 @@ logs/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log

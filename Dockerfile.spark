@@ -1,0 +1,23 @@
+# Imagem do processamento da Silver (fase 2) e, depois, dos jobs do Airflow.
+#
+# Por que Docker e nao PySpark direto no Windows: gravar Delta no disco local do
+# Windows exige os binarios nativos do Hadoop (winutils.exe, hadoop.dll), que
+# nao vem com o PySpark e quebram com mensagem que nao aponta a causa. No
+# contêiner o Hadoop roda como foi feito para rodar.
+FROM python:3.12-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openjdk-21-jre-headless procps \
+ && rm -rf /var/lib/apt/lists/*
+
+# Camada pesada separada: mexer numa dependencia pequena nao rebaixa ~400 MB.
+# delta-spark 4.4.1 declara pyspark>=4.0.1,<=4.2.0.
+RUN pip install --no-cache-dir pyspark==4.2.0 delta-spark==4.4.1
+
+WORKDIR /app
+COPY requirements.txt requirements-spark.txt ./
+RUN pip install --no-cache-dir -r requirements-spark.txt
+
+# Os jars do Delta sao baixados do Maven na primeira sessao e ficam no cache do
+# ivy; montar um volume em /root/.ivy2 evita baixar de novo a cada execucao.
+ENV PYTHONUNBUFFERED=1 PYTHONPATH=/app PYTHONDONTWRITEBYTECODE=1
