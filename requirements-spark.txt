@@ -1,0 +1,7 @@
+-r requirements.txt
+# delta-spark 4.4.1 declara pyspark>=4.0.1,<=4.2.0
+pyspark==4.2.0
+delta-spark==4.4.1
+gtfs-realtime-bindings==2.0.0
+tzdata
+pytest==8.4.2

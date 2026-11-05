@@ -16,8 +16,8 @@ A pergunta que o projeto vai responder:
 |---|---|---|
 | **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**, com alerta externo |
 | **1. Bronze e compactação** | Job horário, consolidação do bruto e backup fora da VM | **no ar desde 16/09/2026**; backup desde 23/10/2026 |
-| 2. Silver em Delta | PySpark, deduplicação com MERGE, headway | pronta para começar: 18 dias acumulados |
-| 3. Gold e dbt | Métricas por linha, corredor e faixa horária | |
+| **2. Silver em Delta** | PySpark, deduplicação com MERGE | **pronta em 05/11/2026**: 52 dias e 87,6 milhões de posições; roda sob demanda até a fase 6 |
+| 3. Gold e dbt | Headway e métricas por linha, corredor e faixa horária | |
 | 4. Análise | Conclusão com recomendação numérica | |
 | 5. ML | Previsão de chegada e detecção de *bus bunching* | |
 | 6. Orquestração | Airflow com backfill por janela de data | |
@@ -297,6 +297,91 @@ mês. A 0,82 GB por mês, o Standard enche por volta de setembro de 2027; antes
 disso, uma regra de ciclo de vida move o antigo para Archive, que é grátis até
 mais 10 GB e serve para restauração de desastre, mesmo levando horas.
 
+## Silver em Delta (fase 2)
+
+O Bronze guarda cada coleta como veio. A Silver guarda cada posição uma vez:
+
+```
+bucket radar-onibus-backup
+        |  silver.sincronizar --de --ate (só o que falta, conferindo o SHA-256)
+        v
+bronze_horario/ na VM de processamento
+        |  silver.processar --de --ate (dia de BH: 24 horas, das 03h às 02h UTC)
+        v
+tabela Delta silver/posicoes, particionada por data_bh
+```
+
+**Onde roda.** A VM do coletor tem 1 GB de RAM e não comporta Spark. O job roda
+em Docker numa segunda VM do mesmo provedor (ARM, 2 OCPU, 12 GB), e a entrada é
+o bucket de backup. Nada disso toca a VM do coletor.
+
+**As decisões:**
+
+- **Chave do próprio feed.** A deduplicação é por `(vehicle_id, vehicle_ts)`,
+  não pelo horário da coleta: o mesmo ônibus parado no feed aparece igual em
+  várias coletas.
+- **Fica a primeira coleta.** A mesma posição pode cair em dois dias de
+  processamento, como nas coletas de 02:59:30 e 03:00:00 UTC. O `MERGE` só
+  atualiza quando a cópia nova foi vista antes da gravada, então o resultado
+  não depende da ordem.
+- **Partição pelo evento.** `data_bh` vem de `vehicle_ts`, convertido para BH.
+  Uma posição das 23:59:50 coletada às 00:00:30 pertence ao dia anterior.
+- **`OPTIMIZE` depois do `MERGE`.** Cada partição termina com um arquivo,
+  ordenado por `route_id`, e o `VACUUM` remove o que ficou sem uso há mais de
+  7 dias.
+
+**Medido em 05/11/2026:**
+
+| Medida | Valor |
+|---|---|
+| Janela | 14/09 a 04/11/2026: 52 dias, com 14/09 parcial (4 horas, início da coleta) |
+| Registros lidos | 128.973.953 |
+| Linhas na tabela | 87.584.194, igual ao número de chaves distintas |
+| Duplicação | 32,1% no total; de 20,6% a 38,8% por dia cheio |
+| Horas ausentes | nenhuma nos 51 dias cheios |
+| Linhas por dia cheio | de 690.251 a 2.239.563, cerca de 51,4 milhões por mês |
+| Tempo | mediana de 164 s por dia nos 38 primeiros; 2,15 h na janela inteira |
+| Tamanho | 1,41 GiB em 52 arquivos, contra 1,4 GiB do Bronze comprimido |
+| Primeiro `VACUUM` | 115 arquivos e 3,38 GB removidos; pasta de 5,7 para 2,7 GB |
+
+A pasta segue maior que a tabela porque ainda guarda as versões dos últimos 7
+dias, que o `VACUUM` só remove quando vencerem.
+
+**Como foi conferido:**
+
+- **Inserções contra a tabela.** A soma das inserções nos 54 `MERGE`s do
+  histórico do Delta é 87.584.194, igual à contagem da tabela.
+- **Spark contra Python.** No pico de 15/09, o Spark chega à mesma contagem de
+  registros e de únicos que uma deduplicação em Python puro, e as 60 primeiras
+  coletas reproduzem a auditoria de 16/09 (40,1% de duplicação às 07h em BH,
+  17,5% às 02h). Os testes ficam em `tests/test_silver.py`.
+- **Reprocessar não muda nada.** O dia 04/11 rodou de novo com 3.101.008
+  registros: 0 linhas inseridas e 0 atualizadas. O `MERGE` ainda reescreve os
+  arquivos que tocou, com o mesmo conteúdo, então reprocessar ocupa disco até o
+  próximo `VACUUM`.
+- **Ordem invertida.** As únicas 31 atualizações do histórico vieram de 14/09,
+  processado depois de 15/09: a posição gravada ficou com a coleta mais antiga,
+  como previsto.
+
+**O que o dado mostrou:**
+
+| Achado | Medida | Consequência |
+|---|---|---|
+| `speed` nunca vem no feed | 100% nulo | velocidade, se precisar, é calculada pela posição |
+| `current_status` só tem um valor | 100% `IN_TRANSIT_TO` | `stop_id` é a próxima parada, nunca a parada atual |
+| GPS fora da região de BH | 3 linhas em 25/10, uma em latitude 31,4 | a Silver mantém, a Gold filtra |
+| Posição à frente da coleta | 1 linha, 4 s | relógio do veículo adiantado; a Silver mantém |
+| Atraso entre evento e primeira coleta | p50 de 41 s, p99 de 79 s, máximo de 600 s | referência para a latência da fase 5 |
+
+Para rodar (os testes de Spark só rodam no contêiner e são pulados fora dele):
+
+```bash
+docker build -f Dockerfile.spark -t radar-spark:dev .
+docker run --rm --env-file .env -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m silver.sincronizar --de 2026-09-15 --ate 2026-09-21
+docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m silver.processar --de 2026-09-15 --ate 2026-09-21 --vacuum
+docker run --rm -e RADAR_DADOS_REAIS=/app/dados -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m pytest -q
+```
+
 ## O que foi descartado, com a evidência
 
 Cada alternativa abaixo foi medida no dado real antes de ser descartada.
@@ -368,8 +453,9 @@ Limites conferidos nas páginas oficiais em 23/10/2026:
 O escolhido resolve o risco que motivou o backup, que é o volume falhar, sem
 conta nova, sem SDK na VM de 1 GB e com proteção contra sobrescrita. O que ele
 não cobre é a perda da conta inteira, porque primário e cópia ficam no mesmo
-provedor. Esse risco fica registrado abaixo; a segunda cópia fora do provedor
-vem com a fase 2, que já grava no Azure.
+provedor. Esse risco fica registrado abaixo, em aberto. A ideia inicial era
+gravar a Silver no Azure e ganhar a cópia fora do provedor com isso; a Silver
+acabou em disco local, então essa cópia não veio com a fase 2.
 
 ### Deduplicar na coleta ou na compactação
 
@@ -471,10 +557,18 @@ nada também para de pingar e dispara o alerta.
   longa custaria dado que não volta. É o que torna a segunda fonte (SPTrans) um
   plano de contingência, e não enfeite.
 - **Backup no mesmo provedor.** O backup cobre falha do volume e da VM, mas não
-  a perda da conta inteira. A segunda cópia, fora do provedor, vem com a fase 2.
+  a perda da conta inteira. A segunda cópia, fora do provedor, segue sem data.
+- **Silver sem cópia.** A tabela fica só no disco da VM de processamento. Se a
+  VM se perder, ela é refeita do backup: o histórico atual levou 2,15 h de
+  processamento, sem contar o download.
 - **Cota gratuita do backup.** O tier Standard enche por volta de setembro de
   2027. Antes disso é preciso criar a regra de ciclo de vida para o Archive,
   senão o excedente passa a ser cobrado.
+- **Validade do link do bucket.** O envio usa um pre-authenticated request,
+  que tem data de vencimento. O primeiro venceu em 30/10/2026 e o backup parou
+  por 6 horas, até o check `backup-horario` avisar e o link ser trocado. Nada
+  se perdeu: os contêineres ficam na VM e o envio retoma de onde parou. O link
+  atual vence em 31/12/2030.
 
 ## Estrutura
 
@@ -495,8 +589,14 @@ backup/
   remoto.py          leitura e escrita no bucket por URL pré-autenticada
   enviar.py          job horário: envia, lê de volta e confere o SHA-256
   restaurar.py       restaura e confere um dia inteiro, de qualquer máquina
+silver/
+  sincronizar.py     traz do bucket os contêineres de uma janela de datas
+  janela.py          dia de BH em horas UTC
+  decodificar.py     protobuf para linhas, sem confundir ausente com zero
+  processar.py       job Spark: deduplicação, MERGE, OPTIMIZE e VACUUM
 deploy/              units do systemd (coletor, vigia, compactação, limpeza e backup)
-tests/               46 testes: coletor, vigia, formato, idempotência, limpeza e backup
+Dockerfile.spark     imagem do Spark com Delta
+tests/               56 testes: coletor, vigia, formato, idempotência, limpeza, backup e Silver
 ```
 
 ## Agradecimento
