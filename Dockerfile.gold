@@ -1,0 +1,13 @@
+# Imagem da Gold: a imagem da Silver mais o dbt.
+#
+# Por que separada: a Silver nao depende do dbt, e uma versao nova do dbt nao
+# deve obrigar a reconstruir nem a revalidar o job da Silver.
+#
+# dbt-spark 1.11 declara pyspark>=3,<5, entao convive com o pyspark 4.2 da base.
+# O extra [session] nao e instalado de proposito: ele so declara o pyspark, que
+# ja esta na base, e assim o pip nao tem chance de mexer nessa versao.
+FROM radar-spark:dev
+
+RUN pip install --no-cache-dir dbt-core==1.11.16 dbt-spark==1.11.0
+
+ENV DBT_PROFILES_DIR=/app/gold DBT_PROJECT_DIR=/app/gold
