@@ -1,0 +1,51 @@
+name: radar_gold
+version: "1.0.0"
+config-version: 2
+profile: radar
+flags:
+  send_anonymous_usage_stats: false
+
+model-paths: [models]
+seed-paths: [seeds]
+macro-paths: [macros]
+test-paths: [tests]
+target-path: target
+clean-targets: [target, logs]
+
+vars:
+  # 14/09 e parcial (a coleta comecou no meio do dia): entra na Silver, nao na Gold.
+  data_inicio: "2026-09-15"
+  data_fim: "2099-12-31"
+  # Regras de calculo. Cada uma esta justificada em gold/README.md.
+  intervalo_max_s: 300
+  feed_parado_s: 300
+  repeticao_mesmo_onibus_s: 300
+  headway_max_min: 180
+  min_headways_parada: 3
+  alta_frequencia_min: 15
+
+# A Silver e registrada como tabela externa: nenhum dado e copiado nem alterado.
+on-run-start:
+  - "create schema if not exists silver"
+  - "create table if not exists silver.posicoes using delta location '/app/dados/silver/posicoes'"
+
+seeds:
+  radar_gold:
+    +schema: ref
+    +file_format: delta
+    +location_root: /app/dados/gold/ref
+
+models:
+  radar_gold:
+    staging:
+      +schema: stg
+      +materialized: view
+    intermediate:
+      +schema: int
+      +materialized: table
+      +file_format: delta
+      +location_root: /app/dados/gold/int
+    marts:
+      +materialized: table
+      +file_format: delta
+      +location_root: /app/dados/gold/marts

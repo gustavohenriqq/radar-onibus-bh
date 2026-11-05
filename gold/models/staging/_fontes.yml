@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: silver
+    schema: silver
+    tables:
+      - name: posicoes
+        description: Silver em Delta. Uma linha por (vehicle_id, vehicle_ts).
