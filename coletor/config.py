@@ -46,6 +46,11 @@ class Config:
     compactacao_folga_min: int
     compactacao_quarentena_h: int
     compactacao_nivel_zstd: int
+    # Com valor padrao para os testes e jobs antigos nao precisarem conhecer o
+    # backup. Ficam no fim porque dataclass exige campos com padrao por ultimo.
+    backup_par_url: str | None = None
+    healthcheck_backup_url: str | None = None
+    backup_folga_h: int = 2
 
     @property
     def dir_bronze(self) -> Path:
@@ -94,4 +99,9 @@ class Config:
             # disco e sao o seguro contra um bug apagar dado insubstituivel.
             compactacao_quarentena_h=int(os.environ.get("COMPACTACAO_QUARENTENA_H", "48")),
             compactacao_nivel_zstd=int(os.environ.get("COMPACTACAO_NIVEL_ZSTD", "10")),
+            # URL pre-autenticada do bucket de backup. E segredo: quem tem a URL
+            # le e grava no bucket (apagar ela nao permite).
+            backup_par_url=_opcional("BACKUP_PAR_URL"),
+            healthcheck_backup_url=_opcional("HEALTHCHECK_BACKUP_URL"),
+            backup_folga_h=int(os.environ.get("BACKUP_FOLGA_H", "2")),
         )
