@@ -1,0 +1,17 @@
+[Unit]
+Description=Roda o backup dos conteineres horarios, de hora em hora
+
+[Timer]
+# Minuto 45: depois da compactacao (minuto 20). Com a folga de 2 h do job, cada
+# execucao copia a hora fechada ha duas horas, entao uma falha do volume perde
+# no maximo cerca de 3 h de dado. Rodar de hora em hora nao custa mais
+# requisicoes que rodar uma vez por dia: o job so fala com o bucket para as
+# horas que ainda nao estao la (4 requisicoes por hora: 2 envios e 2 leituras
+# de conferencia, ~2.900 por mes contra a cota gratuita de 50 mil).
+OnCalendar=*-*-* *:45:00
+Persistent=true
+AccuracySec=1min
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

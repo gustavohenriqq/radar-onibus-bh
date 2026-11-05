@@ -203,3 +203,12 @@ def test_limpeza_e_idempotente(cfg):
     assert limpar_hora(HORA, cfg, seco=False)["apagados"] == 3
     HORA.dir_origem(cfg.dir_bronze).mkdir(parents=True, exist_ok=True)
     assert limpar_hora(HORA, cfg, seco=False)["apagados"] == 0
+
+
+def test_gzip_do_coletor_independe_do_sistema_operacional():
+    # Todo o Bronze foi gravado na VM Linux. A zlib do Windows gravaria 0a no
+    # byte de sistema operacional, e a reconstrucao fora da VM nao bateria.
+    from coletor.armazenamento import comprimir
+    g = comprimir(b"feed")
+    assert g[:10] == bytes.fromhex("1f8b0800000000000003")
+    assert gzip.decompress(g) == b"feed"
