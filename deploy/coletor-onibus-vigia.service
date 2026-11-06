@@ -1,5 +1,5 @@
 [Unit]
-Description=Vigia do coletor: alerta se nao houver arquivo novo em 10 minutos
+Description=Vigia do coletor: sem arquivo, 401/403, disco e feed parado (check coletor-eventos)
 RequiresMountsFor=/dados
 
 [Service]

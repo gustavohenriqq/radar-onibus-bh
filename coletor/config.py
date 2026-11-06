@@ -2,8 +2,8 @@
 
 Por que variavel de ambiente e nao constante no codigo: a chave de acesso vem
 na URL e pode ser rotacionada pela PBH sem aviso. Trocar a chave precisa ser
-editar o .env e reiniciar o servico, sem commit e sem deploy de codigo. O token
-do Telegram, que e segredo, tambem nunca entra no repositorio.
+editar o .env e reiniciar o servico, sem commit e sem deploy de codigo. As URLs
+de ping do healthchecks, que sao segredo, tambem nunca entram no repositorio.
 """
 
 from __future__ import annotations
@@ -39,8 +39,6 @@ class Config:
     backoff_max_s: int
     alerta_sem_arquivo_min: int
     user_agent: str
-    telegram_token: str | None
-    telegram_chat_id: str | None
     healthcheck_url: str | None
     healthcheck_compactacao_url: str | None
     compactacao_folga_min: int
@@ -51,6 +49,8 @@ class Config:
     backup_par_url: str | None = None
     healthcheck_backup_url: str | None = None
     backup_folga_h: int = 2
+    healthcheck_eventos_url: str | None = None
+    alerta_feed_parado_min: int = 10
 
     @property
     def dir_bronze(self) -> Path:
@@ -88,8 +88,6 @@ class Config:
             # User-Agent honesto: quem opera o feed consegue identificar o
             # coletor e saber com quem falar se ele atrapalhar.
             user_agent=f"coletor-onibus-bh/0.1 (+{contato})",
-            telegram_token=_opcional("TELEGRAM_BOT_TOKEN"),
-            telegram_chat_id=_opcional("TELEGRAM_CHAT_ID"),
             healthcheck_url=_opcional("HEALTHCHECK_URL"),
             healthcheck_compactacao_url=_opcional("HEALTHCHECK_COMPACTACAO_URL"),
             # 20 min de folga: cobre relogio da VM fora de hora, jitter do timer
@@ -104,4 +102,9 @@ class Config:
             backup_par_url=_opcional("BACKUP_PAR_URL"),
             healthcheck_backup_url=_opcional("HEALTHCHECK_BACKUP_URL"),
             backup_folga_h=int(os.environ.get("BACKUP_FOLGA_H", "2")),
+            # Check coletor-eventos: so o vigia pinga (coletor/alerta.py).
+            healthcheck_eventos_url=_opcional("HEALTHCHECK_EVENTOS_URL"),
+            # Quedas do feed com status 200 medidas na Gold: 16 de 15/09 a
+            # 04/11, de ate 82 min. 10 min separa queda de onibus atrasado.
+            alerta_feed_parado_min=int(os.environ.get("COLETOR_ALERTA_FEED_PARADO_MIN", "10")),
         )

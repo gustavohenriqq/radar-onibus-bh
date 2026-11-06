@@ -2,4 +2,3 @@
 pytest==8.4.2
 # Base de fusos para o zoneinfo: o Windows nao traz uma
 tzdata
-gtfs-realtime-bindings==2.0.0

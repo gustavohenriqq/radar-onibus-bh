@@ -121,7 +121,8 @@ feed GTFS-RT (a cada 30 s)
         v
    /dados/bronze/vehicle_positions/dt=AAAA-MM-DD/hh=HH/AAAAMMDDTHHMMSSZ.pb.gz
         |
-   vigia (systemd timer, 5 min) -> alerta local se 10 min sem arquivo novo
+   vigia (systemd timer, 5 min) -> check coletor-eventos: sem arquivo, 401/403,
+                                   falha de disco e feed parado com status 200
    ping externo (healthchecks)  -> e-mail, Telegram e SMS se parar de gravar,
                                    inclusive com a VM inteira fora do ar
 ```
@@ -161,7 +162,13 @@ rotacionada. Sem alerta, o serviço seguiria "rodando" sem gravar nada.
 status 200 não é dado e não pode fingir ser feed.
 
 **Vigia em processo separado.** Checagem dentro do coletor morre junto com ele.
-O vigia mede o resultado que importa: arquivo novo no disco.
+O vigia mede o resultado que importa: arquivo novo no disco, e posição de ônibus
+nova dentro dele.
+
+**Um só processo fala com o check de eventos.** O coletor só registra o status de
+cada coleta no log; quem lê esse log e alerta é o vigia. Com os dois pingando o
+mesmo check, o "ok" do vigia apagaria o "401" que o coletor acabou de mandar. De
+quebra, mudar o alerta não pede reiniciar o coletor.
 
 **Falha de ping nunca derruba a coleta.** Em 18 dias, 23 pings ao serviço de
 monitoramento falharam por timeout, contra 14 coletas que falharam. Como o ping
@@ -169,9 +176,9 @@ só é tentado depois do arquivo já estar gravado, e a exceção é capturada, 
 falhas não custaram nenhum dado nem geraram alerta falso.
 
 **Ping externo, além do vigia.** O vigia roda na mesma VM; se a VM cair, ele cai
-junto. Um serviço externo que alerta quando os pings param cobre esse caso, e
-foi o que tornou opcional o bot de Telegram próprio: o serviço externo já
-entrega no Telegram, sem token na VM.
+junto. Um serviço externo que alerta quando os pings param cobre esse caso. O
+mesmo serviço entrega os alertas do vigia (check `coletor-eventos`), o que
+dispensou um bot de Telegram próprio: nenhum token de bot na VM.
 
 ## Compactação horária (fase 1)
 
@@ -428,8 +435,9 @@ tabelas ficam em Delta no disco dessa VM, como a Silver. O build completo levou
 
 - **O feed cai e o status continua 200.** Foram 16 quedas, de até 82 min, em que a
   frota inteira parou de publicar. O headway que atravessa uma queda mede o feed,
-  não o serviço: tirá-los baixou a espera em excesso de 26/10 em 19%. O vigia atual
-  não percebe esse caso, que fica para o alerta de eventos.
+  não o serviço: tirá-los baixou a espera em excesso de 26/10 em 19%. Desde a
+  issue #4 o vigia percebe a queda na hora: alerta quando a posição mais nova do
+  feed passa de 10 min.
 - **25 a 28/10 têm de 2,5 a 3 vezes mais buraco de GPS**, em 85% dos veículos e
   em todas as horas, sem causa conhecida. Os números desses dias ficam, com o aviso.
 
@@ -602,7 +610,7 @@ Windows (PowerShell):
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-Copy-Item .env.example .env        # preencher o Telegram, se quiser alerta
+Copy-Item .env.example .env        # COLETOR_URL; URLs de ping são opcionais
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m coletor          # Ctrl+C para parar
 .\.venv\Scripts\python.exe -m coletor.vigia    # checagem avulsa
@@ -634,6 +642,7 @@ Testado em 14/09/2026, antes de acumular dado, e confirmado em produção depois
 | Reboot da VM | volume montou, coletor e vigia voltaram; 2 coletas perdidas durante o boot |
 | Queda simulada do ping (16/09) | alerta `DOWN` em 11 min no Telegram e no e-mail, sem perder coleta |
 | `unattended-upgrades` reiniciando o serviço (01/10, não planejado) | parada limpa pelo `SIGTERM` e volta em 4 s, **sem perder coleta** |
+| Vigia contra o check `coletor-eventos` (06/11), na VM, com dados e log temporários | os 4 casos detectados: sem arquivo, 401, falha de disco e feed parado (arquivo real de 30 min antes: posição 31 min velha); cada `/fail` aceito pelo check e seguido do aviso de volta, sem tocar no coletor |
 
 Instalação das units:
 
@@ -653,7 +662,13 @@ Duas camadas, porque cada uma cobre o que a outra não vê:
 | Camada | Onde roda | Dispara quando | Cobre VM fora do ar? |
 |---|---|---|---|
 | Ping externo (healthchecks.io) | fora da VM | nenhum arquivo gravado em 1 min + 10 min de tolerância | sim |
-| Vigia local (systemd timer, 5 min) | na VM | mais de 10 min sem arquivo novo; também 401/403 e falha de disco pelo coletor. Hoje só registra no log: o envio ao Telegram exige `TELEGRAM_BOT_TOKEN`, não configurado | não |
+| Vigia local (systemd timer, 5 min), check `coletor-eventos` | na VM | última coleta com 401/403 ou falha de disco (lidos do log de coletas); mais de 10 min sem arquivo novo; feed parado: arquivo chega com status 200, mas a posição de ônibus mais nova passa de 10 min | não |
+
+O vigia pinga sucesso a cada rodada boa. Com problema, manda `/fail` com o motivo
+no corpo, uma vez por motivo, e o aviso de volta quando normaliza. O healthchecks
+só notifica mudança de estado, então, se o motivo muda com o check já fora, o
+vigia manda um ok antes do `/fail` novo: são dois avisos, mas a causa nova chega.
+Se o próprio vigia parar, o check vence em 1 h + 1 h e avisa.
 
 Canais por check, cada um testado com notificação real:
 
@@ -662,6 +677,7 @@ Canais por check, cada um testado com notificação real:
 | `coletor-onibus-bh` | 1 min + 10 min | sim | sim | **sim** |
 | `compactacao-horaria` | 1 h + 30 min | sim | sim | não |
 | `backup-horario` | 1 h + 2 h | sim | sim | não |
+| `coletor-eventos` | 1 h + 1 h | sim | sim | não |
 
 SMS só no coletor porque os créditos são limitados e a queda do coletor é a
 única falha que perde dado para sempre. A compactação e o backup são
@@ -712,8 +728,8 @@ coletor/
   config.py          configuração por variável de ambiente
   armazenamento.py   layout particionado e escrita atômica
   coletor.py         loop, backoff, tratamento de status
-  alerta.py          Telegram, com limite de repetição
-  vigia.py           alerta de 10 min sem arquivo novo
+  alerta.py          ping ok e /fail no check coletor-eventos
+  vigia.py           sem arquivo, 401/403, disco e feed parado, num só check
   registro.py        log JSON Lines com rotação
 compactacao/
   formato.py         contêiner horário: escrita, leitura e reconstrução do bruto
@@ -738,7 +754,7 @@ orquestracao/
   dags/              DAG horária, DAG de reprocessamento e as regras de calendário
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
-tests/               69 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver e Gold
+tests/               99 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver e Gold
 ```
 
 ## Agradecimento
