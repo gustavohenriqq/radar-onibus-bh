@@ -642,7 +642,7 @@ Testado em 14/09/2026, antes de acumular dado, e confirmado em produção depois
 | Reboot da VM | volume montou, coletor e vigia voltaram; 2 coletas perdidas durante o boot |
 | Queda simulada do ping (16/09) | alerta `DOWN` em 11 min no Telegram e no e-mail, sem perder coleta |
 | `unattended-upgrades` reiniciando o serviço (01/10, não planejado) | parada limpa pelo `SIGTERM` e volta em 4 s, **sem perder coleta** |
-| Vigia contra o check `coletor-eventos` (06/11), na VM, com dados e log temporários | os 4 casos detectados: sem arquivo, 401, falha de disco e feed parado (arquivo real de 30 min antes: posição 31 min velha); cada `/fail` aceito pelo check e seguido do aviso de volta, sem tocar no coletor |
+| Vigia contra o check `coletor-eventos` (06/11), na VM, com dados e log temporários | os 4 casos detectados: sem arquivo, 401, falha de disco e feed parado (arquivo real de 30 min antes: posição 31 min velha); os 4 alertas e os 4 avisos de volta chegaram no e-mail e no Telegram, com o motivo; sem tocar no coletor |
 
 Instalação das units:
 
