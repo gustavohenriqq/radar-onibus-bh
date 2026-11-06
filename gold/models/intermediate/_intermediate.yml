@@ -1,21 +1,36 @@
 version: 2
 
 models:
+  - name: int_mapa_contagem
+    description: Observacoes de cada parada em cada posicao da sequencia, por dia.
+    data_tests:
+      - combinacao_unica:
+          arguments:
+            colunas: [route_id, direction_id, letreiro, stop_sequence, stop_id, data_bh]
+
   - name: int_mapa_parada
-    description: Parada mais vista em cada posicao da sequencia, por linha, sentido e letreiro.
+    description: Parada mais vista em cada posicao da sequencia, por linha, sentido e letreiro, no historico inteiro.
+    # Tabela sem data, refeita inteira a cada execucao: o teste olha tudo.
     data_tests:
       - combinacao_unica:
           arguments:
             colunas: [route_id, direction_id, letreiro, stop_sequence]
+          config:
+            where: "1 = 1"
     columns:
       - name: stop_id
-        data_tests: [not_null]
+        data_tests:
+          - not_null:
+              config:
+                where: "1 = 1"
       - name: participacao
         data_tests:
           - entre:
               arguments:
                 minimo: 0
                 maximo: 1
+              config:
+                where: "1 = 1"
 
   - name: int_passagens
     description: Uma linha por parada que uma viagem deixou para tras, com o instante estimado.
@@ -43,8 +58,11 @@ models:
               arguments:
                 values: [intervalo_longo, sem_mapa]
 
+  - name: int_feed_parado_contexto
+    description: Quedas do feed no contexto lido da Silver, inclusive fora da janela gravada.
+
   - name: int_feed_parado
-    description: Periodos sem nenhuma posicao nova em toda a frota.
+    description: Periodos sem nenhuma posicao nova em toda a frota, no dia em que o feed voltou.
     data_tests:
       - combinacao_unica:
           arguments:
@@ -77,9 +95,13 @@ models:
       - name: atravessa_feed_parado
         data_tests: [not_null]
 
+# Cada unit test fixa a janela larga: os dados de exemplo tem datas proprias, e a
+# janela passada por --vars (o Airflow sempre passa) cortaria parte deles.
 unit_tests:
   - name: passagem_no_ponto_medio_e_salto_dividido_em_partes_iguais
     model: int_passagens
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('stg_posicoes')
         rows:
@@ -99,6 +121,8 @@ unit_tests:
 
   - name: recuo_de_sequencia_nao_repete_passagem
     model: int_passagens
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('stg_posicoes')
         rows:
@@ -117,6 +141,8 @@ unit_tests:
 
   - name: buraco_longo_e_parada_sem_mapa_ficam_marcados
     model: int_passagens
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('stg_posicoes')
         rows:
@@ -136,6 +162,8 @@ unit_tests:
   - name: data_e_hora_da_passagem_em_horario_de_bh
     description: 02:30 UTC de 21/10 ainda e 23:30 de 20/10 em BH.
     model: int_passagens
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('stg_posicoes')
         rows:
@@ -150,21 +178,23 @@ unit_tests:
 
   - name: headway_separa_parada_e_sentido_e_descarta_repeticao_do_onibus
     model: int_headways
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('int_passagens')
         rows:
           # Parada p1: a em 0, b em 600, b de novo em 700 (repeticao), c em 1200.
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 0.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 600.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb2, stop_sequence: 1, vehicle_id: b, passagem_unix: 700.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vc, stop_sequence: 1, vehicle_id: c, passagem_unix: 1200.0}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 0.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 600.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb2, stop_sequence: 1, vehicle_id: b, passagem_unix: 700.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vc, stop_sequence: 1, vehicle_id: c, passagem_unix: 1200.0, data_bh: 1970-01-01}
           # Outro sentido e parada excluida nao entram na conta de p1.
-          - {route_id: r1, direction_id: 1, stop_id: p1, viagem_id: vd, stop_sequence: 1, vehicle_id: d, passagem_unix: 300.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: ve, stop_sequence: 1, vehicle_id: e, passagem_unix: 900.0, motivo_exclusao: intervalo_longo}
+          - {route_id: r1, direction_id: 1, stop_id: p1, viagem_id: vd, stop_sequence: 1, vehicle_id: d, passagem_unix: 300.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: ve, stop_sequence: 1, vehicle_id: e, passagem_unix: 900.0, data_bh: 1970-01-01, motivo_exclusao: intervalo_longo}
           # Parada p2: intervalo acima de 180 min fica marcado como invalido.
-          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: va, stop_sequence: 2, vehicle_id: a, passagem_unix: 0.0}
-          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: vb, stop_sequence: 2, vehicle_id: b, passagem_unix: 10801.0}
-      - input: ref('int_feed_parado')
+          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: va, stop_sequence: 2, vehicle_id: a, passagem_unix: 0.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: vb, stop_sequence: 2, vehicle_id: b, passagem_unix: 10801.0, data_bh: 1970-01-01}
+      - input: ref('int_feed_parado_contexto')
         rows:
           - {inicio_unix: 900000, fim_unix: 900600}
     expect:
@@ -178,14 +208,16 @@ unit_tests:
       Feed parado de 1000 a 1400 e de 2000 a 2400. O headway de p1 que cruza os dois
       nao pode repetir a linha. Encostar no periodo sem atravessar nao conta.
     model: int_headways
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('int_passagens')
         rows:
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 400.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 1000.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vc, stop_sequence: 1, vehicle_id: c, passagem_unix: 2500.0}
-          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vd, stop_sequence: 1, vehicle_id: d, passagem_unix: 3100.0}
-      - input: ref('int_feed_parado')
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 400.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 1000.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vc, stop_sequence: 1, vehicle_id: c, passagem_unix: 2500.0, data_bh: 1970-01-01}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vd, stop_sequence: 1, vehicle_id: d, passagem_unix: 3100.0, data_bh: 1970-01-01}
+      - input: ref('int_feed_parado_contexto')
         rows:
           - {inicio_unix: 1000, fim_unix: 1400}
           - {inicio_unix: 2000, fim_unix: 2400}
@@ -194,3 +226,24 @@ unit_tests:
         - {viagem_id: vb, headway_s: 600.0, atravessa_feed_parado: false, headway_valido: true}
         - {viagem_id: vc, headway_s: 1500.0, atravessa_feed_parado: true, headway_valido: false}
         - {viagem_id: vd, headway_s: 600.0, atravessa_feed_parado: false, headway_valido: true}
+
+  - name: headway_do_comeco_do_dia_usa_a_passagem_da_vespera
+    description: >
+      Janela so de 21/10. A passagem das 23:50 de 20/10 em BH fica fora da janela, mas
+      abre o headway das 00:10 de 21/10. Mais de 24 h sem passagem nao vira headway.
+    model: int_headways
+    overrides:
+      vars: {data_inicio: '2026-10-21', data_fim: '2026-10-21'}
+    given:
+      - input: ref('int_passagens')
+        rows:
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: va, stop_sequence: 1, vehicle_id: a, passagem_unix: 1792550970.0, data_bh: 2026-10-20}
+          - {route_id: r1, direction_id: 0, stop_id: p1, viagem_id: vb, stop_sequence: 1, vehicle_id: b, passagem_unix: 1792552170.0, data_bh: 2026-10-21}
+          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: va, stop_sequence: 2, vehicle_id: a, passagem_unix: 1792462000.0, data_bh: 2026-10-19}
+          - {route_id: r1, direction_id: 0, stop_id: p2, viagem_id: vb, stop_sequence: 2, vehicle_id: b, passagem_unix: 1792552200.0, data_bh: 2026-10-21}
+      - input: ref('int_feed_parado_contexto')
+        rows:
+          - {inicio_unix: 900000, fim_unix: 900600}
+    expect:
+      rows:
+        - {stop_id: p1, viagem_id: vb, headway_s: 1200.0, data_bh: 2026-10-21}
