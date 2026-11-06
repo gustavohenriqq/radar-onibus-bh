@@ -16,11 +16,11 @@ A pergunta que o projeto vai responder:
 |---|---|---|
 | **0. Coletor** | Coletor 24/7, bronze particionado, alerta | **no ar desde 14/09/2026, 23:52 UTC**, com alerta externo |
 | **1. Bronze e compactação** | Job horário, consolidação do bruto e backup fora da VM | **no ar desde 16/09/2026**; backup desde 23/10/2026 |
-| **2. Silver em Delta** | PySpark, deduplicação com MERGE | **pronta em 05/11/2026**: 52 dias e 87,6 milhões de posições; roda sob demanda até a fase 6 |
-| **3. Gold e dbt** | Headway, irregularidade e espera por linha e faixa horária | **pronta em 05/11/2026**: 311 linhas, 49,5 milhões de headways, conferida por uma segunda conta; corredor ficou de fora |
+| **2. Silver em Delta** | PySpark, deduplicação com MERGE | **pronta em 05/11/2026**: 52 dias e 87,6 milhões de posições; desde 06/11/2026 roda a cada hora pelo Airflow |
+| **3. Gold e dbt** | Headway, irregularidade e espera por linha e faixa horária | **pronta em 05/11/2026**: 311 linhas, 49,4 milhões de headways, conferida por uma segunda conta; corredor ficou de fora |
 | 4. Análise | Conclusão com recomendação numérica | |
 | 5. ML | Previsão de chegada e detecção de *bus bunching* | |
-| 6. Orquestração | Airflow com backfill por janela de data | |
+| **6. Orquestração** | Airflow com backfill por janela de data | **no ar desde 06/11/2026**: Silver e Gold a cada hora fechada, reprocessamento idempotente por janela |
 
 ## O feed, medido
 
@@ -377,9 +377,12 @@ Para rodar (os testes de Spark só rodam no contêiner e são pulados fora dele)
 
 ```bash
 docker build -f Dockerfile.spark -t radar-spark:dev .
-docker run --rm --env-file .env -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m silver.sincronizar --de 2026-09-15 --ate 2026-09-21
-docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m silver.processar --de 2026-09-15 --ate 2026-09-21 --vacuum
-docker run --rm -e RADAR_DADOS_REAIS=/app/dados -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2" -w /app radar-spark:dev   python -m pytest -q
+docker run --rm --env-file .env -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-spark:dev   python -m silver.sincronizar --de 2026-09-15 --ate 2026-09-21
+docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-spark:dev   python -m silver.processar --de 2026-09-15 --ate 2026-09-21 --vacuum
+docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-spark:dev   python -m silver.processar --hora 2026-11-04T15 --sem-optimize
+docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-spark:dev   python -m silver.manutencao optimize --de 2026-11-04 --ate 2026-11-04
+docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-spark:dev   python -m silver.manutencao vacuum
+docker run --rm -e RADAR_DADOS_REAIS=/app/dados -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-spark:dev   python -m pytest -q
 ```
 
 ## Gold em dbt (fase 3)
@@ -405,7 +408,7 @@ tabelas ficam em Delta no disco dessa VM, como a Silver. O build completo levou
 | Medida | Valor |
 |---|---|
 | Mart de leitura | 90.325 linhas, 311 linhas de ônibus |
-| Headways | 49.502.070, 97,2% válidos |
+| Headways | 49.440.404, 97,4% válidos |
 | Espera em excesso média | 3,07 min por espera, com CV de 0,416 |
 | Pior e melhor faixa | madrugada 4,39 min, início da manhã 1,75 min |
 | Pico da tarde contra pico da manhã | 3,82 contra 2,18 min |
@@ -415,8 +418,9 @@ tabelas ficam em Delta no disco dessa VM, como a Silver. O build completo levou
 - **Segunda conta.** `gold/conferencia.py` refaz o cálculo em Python puro a partir
   da Silver. Em 3 linhas e 12 dias, 307 linhas do mart e 235.790 headways, deu 0
   divergências.
-- **Testes.** 67 testes de dados (unicidade, nulos, faixa plausível e conciliação
-  entre camadas), 9 testes unitários dos modelos e 13 testes Python da conferência.
+- **Testes.** 68 testes de dados (unicidade, nulos, faixa plausível e conciliação
+  entre camadas), 10 testes unitários dos modelos, 13 testes Python da conferência
+  e 5 da impressão digital (`tests/test_digitais.py`).
 - **Dado sujo conhecido vira aviso.** Os 3 GPS fora da região e a posição à frente
   da coleta têm testes que avisam se aparecer um caso novo.
 
@@ -436,6 +440,77 @@ que o feed em tempo real não traz.
 docker build -f Dockerfile.gold -t radar-gold:dev .
 sh gold/rodar.sh seed
 sh gold/rodar.sh build
+```
+
+## Orquestração com Airflow (fase 6)
+
+O Airflow roda na VM de processamento e encadeia, a cada hora fechada, Silver e
+Gold. O coletor, a compactação e o backup continuam no systemd da VM do coletor:
+são o que não pode parar, e não dependem do Airflow para nada.
+
+```
+coletor (VM 1) -> compactação -> backup no bucket, minuto 45
+                                     |
+radar_horario (VM 2, uma execução por hora UTC)
+  aguardar_backup  sensor: o manifesto da hora chegou ao bucket?
+  sincronizar      traz o contêiner da hora e confere o SHA-256
+  silver           MERGE só daquela hora
+  gold             dbt build com a janela de ontem e hoje (dias de BH)
+  avisar_ok        ping no healthchecks
+  na última hora do dia de BH: OPTIMIZE da Silver daquele dia
+  na última hora do domingo:   VACUUM da Silver e da Gold, 7 dias de retenção
+
+radar_reprocessar (manual): de, até e camadas -> Silver e Gold da janela
+```
+
+**Decisão: Airflow dentro da VM de processamento.** A VM tem 2 OCPU e 12 GB. O
+Airflow parado ocupa cerca de 1,0 GB (scheduler 370 MB, processador de DAGs
+321 MB, API 283 MB, Postgres 44 MB). O Spark sobe só durante a tarefa, num
+contêiner irmão, com 4 GB de driver na Silver e 8 GB na Gold, e o pool `spark`
+deixa um por vez. Pico medido em 06/11/2026: 7.306 MB usados de 11.925 no
+reprocessamento de 7 dias e 6.838 MB nas 33 horas da DAG horária. Fora da VM
+custaria uma máquina a mais para
+ganhar nada: o Airflow só dispara contêineres.
+
+**Como ficou enxuto.** LocalExecutor, sem Redis nem worker; sem triggerer; a
+interface só escuta em `127.0.0.1` e é acessada por túnel SSH. As tarefas são
+`DockerOperator` com as mesmas imagens `radar-spark` e `radar-gold` da linha de
+comando: o que roda no Airflow é o mesmo comando que roda à mão.
+
+**Idempotência.** Rodar a mesma hora de novo não muda nada: a Silver deduplica
+por `(vehicle_id, vehicle_ts)` com MERGE, e a Gold regrava só as partições da
+janela. Provado com a impressão digital de cada tabela por dia
+(`gold/digitais.py`):
+
+| Teste | Resultado |
+|---|---|
+| Silver de uma hora já processada (04/11, 15h UTC) | 154.091 registros lidos, 0 inseridos, 0 atualizados, em 112 s |
+| Build completo contra reprocessamento de 19 a 25/10 | 0 dias diferentes nas 8 tabelas; a janela de 7 dias levou 10 min |
+| A mesma janela rodada duas vezes | 0 dias diferentes; 10 min de novo |
+| DAG horária de 05/11, 03h UTC, a 06/11, 11h UTC (33 horas) | 33 sucessos, 7 a 8 min por hora: Silver cerca de 1 min 30 s, Gold cerca de 6 min 40 s (janela de ontem e hoje) |
+| OPTIMIZE da Silver no fim do dia de BH (05/11) | 1 min 13 s |
+| VACUUM da Gold, 10 tabelas | 11 min; nada removido, porque toda a Gold tinha menos de 7 dias |
+
+Em regime, cada hora termina cerca de 2 h 50 depois de fechar: o sensor espera a
+compactação e o backup da VM do coletor.
+
+**Alerta.** A DAG pinga o check `processamento-horario` no fim de cada hora e
+manda `/fail` quando uma tarefa falha. A URL fica no `.env`.
+
+**Hora que nunca chega.** Se o coletor ficar parado uma hora inteira, o manifesto
+dela nunca existe. O sensor espera 6 h, falha e avisa. Como a DAG roda uma hora
+por vez (`max_active_runs=1`), as horas seguintes ficam na fila durante essa
+espera e andam em sequência depois da falha, porque cada hora é independente na
+Silver. Se a hora chegar ao bucket depois das 6 h, basta limpar a tarefa
+`aguardar_backup` daquela execução na interface para ela rodar de novo.
+
+Para subir, na VM de processamento:
+
+```bash
+cp orquestracao/.env.example orquestracao/.env   # preencher; nunca vai para o Git
+cd orquestracao && docker compose up -d
+ssh -L 8080:localhost:8080 ubuntu@<ip-da-vm>        # e abrir http://localhost:8080
+docker compose exec airflow-scheduler airflow dags trigger radar_reprocessar   -c '{"de": "2026-10-19", "ate": "2026-10-25", "camadas": "so_gold"}'
 ```
 
 ## O que foi descartado, com a evidência
@@ -625,6 +700,10 @@ nada também para de pingar e dispara o alerta.
   por 6 horas, até o check `backup-horario` avisar e o link ser trocado. Nada
   se perdeu: os contêineres ficam na VM e o envio retoma de onde parou. O link
   atual vence em 31/12/2030.
+- **Logs e banco do Airflow crescem sem limite.** São 24 execuções por dia, cada
+  uma com log por tarefa em `orquestracao/logs` e linhas no Postgres do Airflow.
+  Ainda não há limpeza automática (`airflow db clean` e apagar logs antigos); até
+  ela existir, conferir o disco da VM de processamento de tempos em tempos.
 
 ## Estrutura
 
@@ -649,9 +728,14 @@ silver/
   sincronizar.py     traz do bucket os contêineres de uma janela de datas
   janela.py          dia de BH em horas UTC
   decodificar.py     protobuf para linhas, sem confundir ausente com zero
-  processar.py       job Spark: deduplicação, MERGE, OPTIMIZE e VACUUM
+  processar.py       job Spark: deduplicação e MERGE, por janela de dias ou por hora
+  manutencao.py      OPTIMIZE e VACUUM, separados do job horário
 deploy/              units do systemd (coletor, vigia, compactação, limpeza e backup)
-gold/                dbt: modelos, testes, seeds e a segunda conta (conferencia.py)
+gold/                dbt: modelos, testes, seeds, a segunda conta (conferencia.py)
+                     e a impressão digital por dia (digitais.py)
+orquestracao/
+  docker-compose.yml Airflow da VM de processamento: Postgres, scheduler, API
+  dags/              DAG horária, DAG de reprocessamento e as regras de calendário
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
 tests/               69 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver e Gold
