@@ -1,71 +1,52 @@
-"""Envio de alerta pelo Telegram.
+"""Envio de alerta pelo check `coletor-eventos` do healthchecks.io.
 
-Por que Telegram: gratuito, chega no celular na hora e e um POST HTTP, sem
-servidor de e-mail nem risco de cair no spam.
+Por que healthchecks e nao um bot do Telegram: o servico ja entrega por e-mail
+e Telegram os outros checks, com canais testados. Um bot proprio seria mais um
+segredo na VM e mais um canal a manter. Decisao do dono em 05/11/2026 (issue #4).
 
-Regra: falha ao alertar nunca derruba o coletor. O alerta e acessorio, a
-coleta e o que nao pode parar.
+Como o check e usado: o vigia pinga sucesso quando esta tudo bem e manda
+`/fail` com o motivo no corpo quando nao esta. O corpo aparece no painel e na
+notificacao. Um so processo fala com o check (o vigia): se o coletor tambem
+falasse, um "ok" do vigia apagaria o "401" que o coletor acabou de mandar.
+
+Regra: falha ao alertar nunca derruba quem alerta. O alerta e acessorio.
 """
 
 from __future__ import annotations
 
 import logging
-import time
 
 import requests
 
 log = logging.getLogger("coletor")
 
 
-class Telegram:
-    def __init__(self, token: str | None, chat_id: str | None, sessao: requests.Session | None = None):
-        self.token = token
-        self.chat_id = chat_id
+class Healthchecks:
+    def __init__(self, url: str | None, sessao: requests.Session | None = None):
+        self.url = url.rstrip("/") if url else None
         self.sessao = sessao or requests.Session()
 
     @property
     def configurado(self) -> bool:
-        return bool(self.token and self.chat_id)
+        return bool(self.url)
 
-    def enviar(self, texto: str) -> bool:
+    def ok(self, texto: str = "") -> bool:
+        return self._pingar("", texto)
+
+    def falha(self, texto: str) -> bool:
+        return self._pingar("/fail", texto)
+
+    def _pingar(self, sufixo: str, texto: str) -> bool:
         if not self.configurado:
-            log.warning("alerta_nao_configurado", extra={"campos": {"texto": texto}})
+            # Ping ok sem texto (toda rodada boa) nao enche o log de aviso.
+            if texto:
+                log.warning("alerta_nao_configurado", extra={"campos": {"texto": texto}})
             return False
         try:
-            r = self.sessao.post(
-                f"https://api.telegram.org/bot{self.token}/sendMessage",
-                data={"chat_id": self.chat_id, "text": texto},
-                timeout=10,
-            )
+            r = self.sessao.post(self.url + sufixo, data=texto.encode("utf-8"), timeout=10)
             r.raise_for_status()
             return True
         except requests.RequestException as e:
-            # Nao loga a URL: ela contem o token do bot.
+            # Nao loga a URL: quem tem a URL de ping consegue mexer no check.
             log.error("alerta_falhou", extra={"campos": {"erro": type(e).__name__, "texto": texto}})
             return False
-
-
-class AvisoComIntervalo:
-    """Evita inundar o celular: um problema que persiste gera um alerta na
-    primeira ocorrencia, um lembrete por intervalo, e um aviso de recuperacao
-    quando volta ao normal."""
-
-    def __init__(self, canal: Telegram, lembrete_s: int = 3600, relogio=time.time):
-        self.canal = canal
-        self.lembrete_s = lembrete_s
-        self.relogio = relogio
-        self._ativos: dict[str, float] = {}
-
-    def avisar(self, chave: str, texto: str) -> bool:
-        agora = self.relogio()
-        ultimo = self._ativos.get(chave)
-        if ultimo is not None and agora - ultimo < self.lembrete_s:
-            return False
-        self._ativos[chave] = agora
-        return self.canal.enviar(texto)
-
-    def resolver(self, chave: str, texto: str) -> bool:
-        if chave not in self._ativos:
-            return False
-        del self._ativos[chave]
-        return self.canal.enviar(texto)
