@@ -10,6 +10,7 @@ with paradas as (
     select * from {{ ref('fct_headway_parada_faixa') }}
     where headways >= {{ var('min_headways_parada') }}
       and headway_medio_min > 0
+      and {{ na_janela() }}
 ),
 
 agregado as (

@@ -7,11 +7,13 @@ processamento.
 ## Como uma posição vira espera
 
 ```
-stg_posicoes              posições dentro da região de BH, de 15/09 em diante
-  |-> int_feed_parado     períodos em que a frota inteira parou de publicar
-  |-> int_mapa_parada     parada mais vista por linha, sentido, letreiro e sequência
-  |-> int_passagens       uma linha por parada que uma viagem deixou para trás
-        |-> int_headways  intervalo entre passagens na mesma linha, sentido e parada
+stg_posicoes                  posições dentro da região de BH: a janela mais o contexto
+  |-> int_feed_parado_contexto  períodos em que a frota inteira parou de publicar
+  |     |-> int_feed_parado     o registro desses períodos, por dia
+  |-> int_mapa_contagem       quantas vezes cada parada apareceu, por dia
+  |     |-> int_mapa_parada   parada mais vista por linha, sentido, letreiro e sequência
+  |-> int_passagens           uma linha por parada que uma viagem deixou para trás
+        |-> int_headways      intervalo entre passagens na mesma linha, sentido e parada
               |-> fct_headway_parada_faixa   métricas por parada, dia e faixa
                     |-> fct_servico_linha_faixa  média entre paradas: o mart de leitura
               |-> fct_qualidade_diaria       o que entrou e o que ficou de fora
@@ -37,7 +39,8 @@ duas posições, as paradas `s` até `t-1` ficaram para trás nesse intervalo.
 linha, no mesmo sentido, na mesma parada. Variantes de letreiro contam juntas: para
 quem está no ponto, é o mesmo ônibus. O headway pertence à passagem que o encerra,
 e dela vêm a data e a faixa. Headway acima de 180 min ou que atravessa uma queda do
-feed fica marcado como inválido e sai da conta (ver "Quando o feed cai").
+feed fica marcado como inválido e sai da conta (ver "Quando o feed cai"). Acima de
+24 h nem é registrado (ver "Atualização por janela").
 
 **Métricas por parada.** Com `H` o headway:
 
@@ -93,7 +96,7 @@ e `headway_valido` falso. `fct_qualidade_diaria` conta esses casos em
 |---|---|
 | Quedas | 16, somando 32.790 s; a maior, de 4.899 s, em 02/10 às 03:38 UTC |
 | Repetição | três quedas de cerca de 80 min começando por volta de 03:38 UTC (23/09, 02/10, 07/10) |
-| Headways que atravessam | 378.508 de 49.502.070, 0,76% |
+| Headways que atravessam | 352.672 de 49.440.404, 0,71% |
 | Espera em excesso média | 3,160 para 3,070 min, queda de 2,8% |
 | CV médio | 0,421 para 0,416 |
 | Dia mais afetado | 26/10, duas quedas: excesso de 4,184 para 3,381 min, queda de 19% |
@@ -127,6 +130,56 @@ justamente o comboio que a métrica existe para medir. Se ainda assim todos esse
 casos abaixo de 2 min fossem artefato, o excesso cairia de 2,129 para 1,982 min, 7%:
 esse é o tamanho máximo do erro por essa causa.
 
+## Atualização por janela
+
+Cada execução recebe uma janela de dias de BH, `data_inicio` a `data_fim`, e só
+reescreve as partições desses dias (`insert_overwrite` por `data_bh`). O Airflow
+manda, a cada hora, a janela de ontem e hoje. O reprocessamento manda a janela
+pedida mais o dia seguinte.
+
+**Contexto.** Para escrever um dia, a Gold lê a Silver de 2 dias antes até 1 dia
+depois (`contexto_antes_dias`). A margem foi medida no histórico de 15/09 a 04/11:
+
+| Medida | Valor | O que cobre |
+|---|---|---|
+| Viagem mais longa | 10.860 s (3 h); nenhuma passa de 6 h ou de 2 dias | a viagem que entra no dia já começou no contexto |
+| Maior intervalo entre passagens usado | 9.372 s | a passagem anterior está no contexto |
+| Queda do feed | calculada no contexto inteiro | a queda que começa na véspera é vista |
+
+**Headway no começo da janela.** A passagem anterior ao primeiro ônibus do dia vem
+das partições já gravadas de `int_passagens`, de até 2 dias antes. Por isso a ordem
+importa: uma janela sempre pressupõe os dias anteriores já processados, e o
+backfill vai do mais antigo para o mais novo.
+
+**Headway acima de 24 h não é registrado** (`headway_registrado_max_h`). Eram
+61.666 de 49.502.070, todos já inválidos por passar de 180 min. Sem esse corte, o
+headway dependeria de quanto histórico a execução enxergou, e a janela daria um
+resultado diferente do build completo.
+
+**O mapa vem do histórico inteiro.** `int_mapa_contagem` guarda as contagens por
+dia; `int_mapa_parada` soma todas. Um dia antigo só usa o mapa mais novo se for
+reprocessado. A diferença foi medida em 06/11/2026, montando o mapa só com os
+dias até um corte e comparando com o mapa de 15/09 a 04/11 (47.257 chaves):
+
+| Mapa até | Chaves que trocaram de parada | Peso nas observações seguintes |
+|---|---|---|
+| 21/09 (1 semana) | 22 de 43.725 (0,05%) | 0,004% |
+| 30/09 | 18 de 44.756 (0,04%) | 0,002% |
+| 15/10 | 19 de 46.395 (0,04%) | 0,002% |
+| 31/10 | 1 de 47.017 | 0,000% |
+
+Chave nova, que o mapa velho não tinha, pesa de 0,005% a 0,06% das observações
+seguintes; ela entra no mapa na hora em que aparece. Reprocessar o histórico por
+causa do mapa não compensa.
+
+**Testes de dados.** Rodam só sobre a janela (`where: janela` no
+`dbt_project.yml`, trocado por `na_janela()` em `macros/janela.sql`). O mapa,
+que é do histórico inteiro, é testado inteiro.
+
+**Proteções.** `--full-refresh` só aceita a janela inteira (sem `--vars`): com uma
+janela, apagaria os outros dias. Janela que começa antes de 15/09/2026 ou termina
+antes de começar falha antes de rodar qualquer modelo.
+
 ## Números conferidos
 
 Build completo em 05/11/2026, de 15/09 a 04/11:
@@ -134,9 +187,9 @@ Build completo em 05/11/2026, de 15/09 a 04/11:
 | Medida | Valor |
 |---|---|
 | Mart de leitura | 90.325 linhas, 311 linhas de ônibus |
-| Headways | 49.502.070; 48.139.727 válidos, 983.835 acima de 180 min, 378.508 em queda do feed |
+| Headways | 49.440.404; 48.139.727 válidos, 948.005 acima de 180 min, 352.672 em queda do feed |
 | Espera em excesso média | 3,07 min, com CV de 0,416 e headway médio de 29,1 min |
-| Testes | 67 testes de dados, 9 testes unitários, 13 testes Python da conferência |
+| Testes | 68 testes de dados, 10 testes unitários, 13 testes Python da conferência e 5 da impressão digital |
 
 **Segunda conta.** `gold/conferencia.py` refaz tudo em Python puro, a partir da
 Silver, sem SQL: passagens, repetição, quedas do feed, headways e médias. Para as
@@ -171,9 +224,12 @@ manhã. Dia útil fica em 3,203 min, sábado em 2,540 e domingo ou feriado em
 - **A última parada de cada viagem não gera passagem**, porque o ônibus nunca informa
   uma próxima parada depois dela. A primeira também não: a menor sequência vista no
   feed é 2.
-- **O mapa é um só para a janela inteira.** Se um itinerário mudar no meio, a parada
-  mais vista ganha para o período todo. O mapa concorda com o próprio feed em 99,83%
-  das observações no histórico inteiro.
+- **O mapa é um só para o histórico inteiro.** Se um itinerário mudar no meio, a
+  parada mais vista ganha para o período todo. O mapa concorda com o próprio feed em
+  99,83% das observações no histórico inteiro. Como o mapa cresce a cada hora, um
+  dia antigo fica com o mapa da época em que foi processado até ser reprocessado;
+  a diferença medida é de no máximo 0,004% das observações (ver "Atualização por
+  janela").
 - **25 a 28/10/2026 têm mais buraco de GPS, sem causa conhecida.** A fração de
   passagens descartadas por intervalo longo foi de 8,4%, 7,6%, 7,2% e 6,9%, contra
   a mediana de 2,78% no período inteiro, e 3,8% em 29/10. Não é efeito de domingo: os
@@ -191,10 +247,27 @@ manhã. Dia útil fica em 3,203 min, sábado em 2,540 e domingo ou feriado em
 docker build -f Dockerfile.gold -t radar-gold:dev .   # pede radar-spark:dev
 sh gold/rodar.sh seed
 sh gold/rodar.sh build
-sh gold/rodar.sh build --vars '{data_inicio: 2026-10-19, data_fim: 2026-10-25}'
+sh gold/rodar.sh build --full-refresh      # reconstrói tudo, de 15/09 até hoje
+sh gold/rodar.sh build --vars '{data_inicio: 2026-10-19, data_fim: 2026-10-26}'
+sh gold/rodar.sh run-operation vacuum_gold # apaga versões com mais de 7 dias
 docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-gold:dev \
   python -m gold.conferencia --linhas 62 9104 4110 --de 2026-10-19 --ate 2026-10-30
+docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-gold:dev \
+  python -m gold.digitais --saida dados/digitais.json   # impressão digital por dia
 ```
 
-Com `--vars` a tabela inteira é reconstruída só com aquela janela, então serve para
-desenvolver, não para atualizar. O backfill por janela é da fase 6.
+`build --vars` reescreve só os dias da janela. No dia a dia quem chama é o Airflow
+(ver `orquestracao/`); a linha de comando serve para desenvolver e conferir.
+
+`gold/digitais.py` resume cada tabela por dia em contagem, soma de hashes das
+colunas exatas e duas somas de cada coluna decimal. `--comparar a.json b.json`
+aponta os dias que mudaram entre duas fotos: é como se prova que o backfill dá o
+mesmo que o build completo.
+
+Coluna decimal fica fora do hash porque o Spark soma em ordem diferente a cada
+execução e a média muda na 15ª casa. Arredondar em 6 casas antes do hash não
+basta: na primeira versão das digitais, o mart de linha deu 14 dias "diferentes"
+entre dois builds com a mesma entrada, por um valor por dia que caiu do outro
+lado da fronteira do arredondamento. As somas são comparadas com tolerância
+relativa de 1e-9, e a soma ponderada por um peso tirado das colunas exatas pega
+valor trocado de linha.

@@ -5,8 +5,12 @@
 -- O headway pertence a passagem que o encerra (a data e a hora dela).
 {{ config(partition_by=['data_bh']) }}
 
+-- Passagens ja gravadas dos dois dias antes da janela: o primeiro headway do dia
+-- comeca na vespera, e a regra de repeticao olha a passagem anterior a ele.
 with validas as (
-    select * from {{ ref('int_passagens') }} where motivo_exclusao is null
+    select * from {{ ref('int_passagens') }}
+    where motivo_exclusao is null
+      and data_bh between date_sub(date'{{ var("data_inicio") }}', 2) and date'{{ var("data_fim") }}'
 ),
 
 com_anterior as (
@@ -47,7 +51,7 @@ com_headway as (
 
 janelas as (
     select collect_list(named_struct('inicio', inicio_unix, 'fim', fim_unix)) as lista
-    from {{ ref('int_feed_parado') }}
+    from {{ ref('int_feed_parado_contexto') }}
 ),
 
 marcados as (
@@ -59,7 +63,12 @@ marcados as (
             as atravessa_feed_parado
     from com_headway h
     cross join janelas j
+    -- Mais de 24 h sem passagem nao e espera, e a linha sem servico naquela parada.
+    -- O limite tambem e o que a janela enxerga para tras: sem ele, o backfill de uma
+    -- semana e o build completo dariam contagens diferentes.
     where h.headway_s is not null
+      and h.headway_s <= {{ var('headway_registrado_max_h') }} * 3600
+      and {{ na_janela('h.data_bh') }}
 )
 
 select

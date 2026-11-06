@@ -1,10 +1,10 @@
 -- Todo dia que existe na Silver dentro da janela tem que chegar ao mart.
 with silver as (
-    select distinct data_bh from {{ ref('stg_posicoes') }}
+    select distinct data_bh from {{ ref('stg_posicoes') }} where {{ na_janela() }}
 ),
 
 mart as (
-    select distinct data_bh from {{ ref('fct_servico_linha_faixa') }}
+    select distinct data_bh from {{ ref('fct_servico_linha_faixa') }} where {{ na_janela() }}
 )
 
 select s.data_bh

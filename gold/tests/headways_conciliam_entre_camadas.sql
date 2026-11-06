@@ -4,7 +4,7 @@
 with origem as (
     select data_bh, count(*) as n
     from {{ ref('int_headways') }}
-    where headway_valido
+    where headway_valido and {{ na_janela() }}
     group by data_bh
 ),
 
@@ -15,12 +15,14 @@ parada as (
         sum(case when headways >= {{ var('min_headways_parada') }} and headway_medio_min > 0
             then headways else 0 end) as n_amostra
     from {{ ref('fct_headway_parada_faixa') }}
+    where {{ na_janela() }}
     group by data_bh
 ),
 
 linha as (
     select data_bh, sum(headways) as n
     from {{ ref('fct_servico_linha_faixa') }}
+    where {{ na_janela() }}
     group by data_bh
 )
 

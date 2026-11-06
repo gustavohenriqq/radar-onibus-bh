@@ -1,6 +1,7 @@
 """Traz do bucket de backup os contêineres de uma janela de datas em BH.
 
 Uso: python -m silver.sincronizar --de 2026-09-15 --ate 2026-09-21 [--dados DIR]
+     python -m silver.sincronizar --hora 2026-11-05T14
 
 A Silver roda fora da VM (1 GB de RAM nao comporta Spark), e a fonte dela e o
 proprio backup: o mesmo bucket que protege o historico serve de entrada para o
@@ -23,7 +24,7 @@ from dotenv import load_dotenv
 from backup.remoto import NaoEncontrado, Remoto
 from compactacao import formato
 from compactacao.horas import Hora
-from silver.janela import dias, horas_utc_do_dia
+from silver.janela import dias, hora_utc, horas_utc_do_dia
 
 
 def local_valido(hora: Hora, dir_horario: Path) -> bool:
@@ -46,10 +47,13 @@ def sincronizar_hora(hora: Hora, remoto: Remoto, dados: Path) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Baixa do backup os contêineres de uma janela em BH")
-    p.add_argument("--de", required=True, type=date.fromisoformat)
-    p.add_argument("--ate", required=True, type=date.fromisoformat)
+    p.add_argument("--de", type=date.fromisoformat)
+    p.add_argument("--ate", type=date.fromisoformat)
+    p.add_argument("--hora", type=hora_utc, help="uma hora UTC, AAAA-MM-DDTHH, em vez de --de/--ate")
     p.add_argument("--dados", type=Path, default=Path(os.environ.get("SILVER_BRONZE_DIR", "dados")))
     args = p.parse_args(argv)
+    if bool(args.hora) == bool(args.de or args.ate) or (args.de is None) != (args.ate is None):
+        p.error("use --hora, ou --de e --ate")
 
     load_dotenv(override=False)
     url = os.environ.get("BACKUP_PAR_URL", "").strip()
@@ -60,17 +64,19 @@ def main(argv: list[str] | None = None) -> int:
 
     contagem = {"baixada": 0, "ja_tinha": 0, "ausente": 0}
     falhas = 0
-    for dia in dias(args.de, args.ate):
-        for hora in horas_utc_do_dia(dia):
-            try:
-                contagem[sincronizar_hora(hora, remoto, args.dados)] += 1
-            except NaoEncontrado:
-                contagem["ausente"] += 1
-            except Exception as e:
-                falhas += 1
-                print(f"FALHA {e}", file=sys.stderr)
+    horas = [args.hora] if args.hora else [h for d in dias(args.de, args.ate) for h in horas_utc_do_dia(d)]
+    for hora in horas:
+        try:
+            contagem[sincronizar_hora(hora, remoto, args.dados)] += 1
+        except NaoEncontrado:
+            contagem["ausente"] += 1
+        except Exception as e:
+            falhas += 1
+            print(f"FALHA {e}", file=sys.stderr)
     print(json.dumps({**contagem, "falhas": falhas}))
-    return 1 if falhas else 0
+    # Numa janela, hora ausente e normal (coleta parada, dia de hoje). Pedida
+    # sozinha, e porque alguem viu o manifesto no bucket: sumir e falha.
+    return 1 if falhas or (args.hora and contagem["ausente"]) else 0
 
 
 if __name__ == "__main__":

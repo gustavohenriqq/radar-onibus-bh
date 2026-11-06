@@ -130,12 +130,16 @@ models:
                 minimo: 0
                 maximo: 1
 
+# Cada unit test fixa a janela larga: os dados de exemplo tem datas proprias, e a
+# janela passada por --vars (o Airflow sempre passa) cortaria parte deles.
 unit_tests:
   - name: formulas_da_espera_com_resposta_conhecida
     description: >
       Headways de 10 e 30 min. Media 20, E[H^2] 500 min2, CV 0,5,
       espera estimada 12,5, regular 10, excesso 2,5.
     model: fct_headway_parada_faixa
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('int_headways')
         rows:
@@ -156,6 +160,8 @@ unit_tests:
       e zero. A linha continua no mart, para nenhum headway sumir, e o que divide
       pela media sai nulo.
     model: fct_headway_parada_faixa
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('int_headways')
         rows:
@@ -172,6 +178,8 @@ unit_tests:
       Parada com muitos headways nao pesa mais, e ficam de fora a parada com menos
       de 3 e a de media zero. Sabado comum e feriado saem classificados.
     model: fct_servico_linha_faixa
+    overrides:
+      vars: {data_inicio: '1969-12-31', data_fim: '2999-12-31'}
     given:
       - input: ref('fct_headway_parada_faixa')
         rows:

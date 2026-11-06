@@ -15,6 +15,12 @@ from compactacao.horas import Hora
 BH = ZoneInfo("America/Sao_Paulo")
 
 
+def hora_utc(texto: str) -> Hora:
+    """'2026-11-05T14' -> a hora UTC das 14h de 05/11, como o Airflow entrega."""
+    h = datetime.strptime(texto[:13], "%Y-%m-%dT%H")
+    return Hora(h.strftime("%Y-%m-%d"), h.strftime("%H"))
+
+
 def dias(de: date, ate: date) -> list[date]:
     if ate < de:
         raise ValueError("data final antes da inicial")

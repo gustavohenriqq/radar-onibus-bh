@@ -3,10 +3,13 @@
 Uso:
     python -m silver.processar --de 2026-09-15 --ate 2026-09-21
         [--bronze DIR] [--destino CAMINHO] [--sem-optimize] [--vacuum]
+    python -m silver.processar --hora 2026-11-05T14 --sem-optimize
 
-Processa dia a dia, em horario de BH. Para cada dia:
+Processa dia a dia, em horario de BH, ou uma hora UTC so (o que o Airflow faz a
+cada hora fechada). Para cada dia ou hora:
 
-1. le as 24 horas UTC do dia (silver/janela.py) e decodifica em paralelo;
+1. le as horas UTC do dia (silver/janela.py), ou a hora pedida, e decodifica em
+   paralelo;
 2. deduplica por (vehicle_id, vehicle_ts), a chave do proprio feed, e nao pelo
    horario da coleta. Medido: 40,1% dos registros no pico sao repeticao;
 3. faz MERGE na tabela Delta. Idempotente: rodar o mesmo dia de novo nao muda
@@ -29,7 +32,8 @@ import time
 from datetime import date
 from pathlib import Path
 
-from silver.janela import BH, dias, horas_utc_do_dia
+from compactacao.horas import Hora
+from silver.janela import BH, dias, hora_utc, horas_utc_do_dia
 
 log = logging.getLogger("silver")
 
@@ -158,8 +162,14 @@ def limpar_versoes(spark, destino: str, horas: int = 168) -> None:
 
 
 def processar_dia(spark, dia: date, dir_horario: Path, destino: str, optimize: bool = True) -> dict:
+    return {"dia": str(dia), **processar_horas(spark, horas_utc_do_dia(dia), dir_horario, destino, optimize)}
+
+
+def processar_horas(spark, horas: list[Hora], dir_horario: Path, destino: str, optimize: bool = True) -> dict:
+    """MERGE de um conjunto de horas. A chave e do feed, entao uma hora sozinha
+    da o mesmo resultado que o dia inteiro: a copia que aparece em duas horas
+    fica com a primeira coleta, em qualquer ordem."""
     t0 = time.perf_counter()
-    horas = horas_utc_do_dia(dia)
     conteineres = [h.conteiner(dir_horario) for h in horas]
     presentes = [c for c in conteineres if c.exists()]
     ausentes = [f"{h.dt} {h.hh}" for h, c in zip(horas, conteineres) if not c.exists()]
@@ -174,7 +184,6 @@ def processar_dia(spark, dia: date, dir_horario: Path, destino: str, optimize: b
     brutos.unpersist()
     unicos.unpersist()
     return {
-        "dia": str(dia),
         "horas": len(presentes),
         "horas_ausentes": ausentes,
         "registros": n_brutos,
@@ -182,14 +191,16 @@ def processar_dia(spark, dia: date, dir_horario: Path, destino: str, optimize: b
         "duplicacao_pct": round(100 * (1 - n_unicos / n_brutos), 1) if n_brutos else None,
         "inseridas": resultado["inseridas"],
         "atualizadas": resultado["atualizadas"],
+        "datas": resultado["datas"],
         "segundos": round(time.perf_counter() - t0, 1),
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Bronze -> Silver em Delta, por janela de datas em BH")
-    p.add_argument("--de", required=True, type=date.fromisoformat)
-    p.add_argument("--ate", required=True, type=date.fromisoformat)
+    p.add_argument("--de", type=date.fromisoformat)
+    p.add_argument("--ate", type=date.fromisoformat)
+    p.add_argument("--hora", type=hora_utc, help="uma hora UTC, AAAA-MM-DDTHH, em vez de --de/--ate")
     p.add_argument("--bronze", type=Path, default=Path(os.environ.get("SILVER_BRONZE_DIR", "dados")),
                    help="pasta que contem bronze_horario/ (padrao: ./dados)")
     p.add_argument("--destino", default=os.environ.get("SILVER_DESTINO", "dados/silver/posicoes"),
@@ -197,6 +208,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sem-optimize", action="store_true")
     p.add_argument("--vacuum", action="store_true", help="no fim, apaga versoes antigas (mais de 7 dias)")
     args = p.parse_args(argv)
+    if bool(args.hora) == bool(args.de or args.ate) or (args.de is None) != (args.ate is None):
+        p.error("use --hora, ou --de e --ate")
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     # OPTIMIZE delta.`...` so aceita caminho absoluto.
@@ -208,13 +221,23 @@ def main(argv: list[str] | None = None) -> int:
     # driver, entao um caminho relativo so funcionaria por coincidencia.
     dir_horario = args.bronze.resolve() / "bronze_horario" / "vehicle_positions"
     falhas = 0
-    for dia in dias(args.de, args.ate):
+    if args.hora:
+        lotes = [(f"{args.hora.dt}T{args.hora.hh}", lambda: processar_horas(
+            spark, [args.hora], dir_horario, destino, not args.sem_optimize))]
+    else:
+        lotes = [(str(d), lambda d=d: processar_dia(spark, d, dir_horario, destino, not args.sem_optimize))
+                 for d in dias(args.de, args.ate)]
+    for nome, rodar in lotes:
         try:
-            log.info(json.dumps(processar_dia(spark, dia, dir_horario, destino, not args.sem_optimize),
-                                ensure_ascii=False))
+            r = rodar()
+            log.info(json.dumps({"lote": nome, **r}, ensure_ascii=False))
+            if args.hora and not r["horas"]:
+                # Quem pede uma hora espera que ela exista: o Airflow so chama depois
+                # de ver o conteiner no bucket. Sem ele, e falha, nao "zero linhas".
+                raise FileNotFoundError(f"conteiner da hora {nome} nao encontrado")
         except Exception as e:
             falhas += 1
-            log.exception(json.dumps({"dia": str(dia), "erro": str(e)[:300]}))
+            log.exception(json.dumps({"lote": nome, "erro": str(e)[:300]}))
     if args.vacuum and not falhas:
         limpar_versoes(spark, destino)
     spark.stop()

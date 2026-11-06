@@ -11,6 +11,7 @@ with passagens as (
         sum(case when motivo_exclusao is null and parada_do_mapa then 1 else 0 end) as paradas_pelo_mapa,
         sum(case when motivo_exclusao is null and paradas_no_intervalo > 1 then 1 else 0 end) as instantes_divididos
     from {{ ref('int_passagens') }}
+    where {{ na_janela() }}
     group by data_bh
 ),
 
@@ -23,6 +24,7 @@ headways as (
         sum(case when atravessa_feed_parado then 1 else 0 end) as headways_feed_parado,
         count(distinct route_id) as linhas
     from {{ ref('int_headways') }}
+    where {{ na_janela() }}
     group by data_bh
 )
 

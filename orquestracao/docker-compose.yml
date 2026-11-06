@@ -1,0 +1,124 @@
+# Airflow da VM de processamento (fase 6).
+#
+# Base: o docker-compose.yaml oficial do Airflow 3.3.2, enxugado para uma VM so:
+# - LocalExecutor em vez de Celery: sem Redis e sem worker. As tarefas rodam como
+#   subprocessos do scheduler, e cada uma sobe um conteiner irmao (radar-spark ou
+#   radar-gold) pelo socket do Docker.
+# - Sem triggerer: nenhuma tarefa e deferrable; o sensor usa mode=reschedule.
+# - Interface presa a 127.0.0.1: acesso so por tunel SSH, nada exposto na internet.
+#
+# Subir:   cd ~/radar/orquestracao && docker compose up -d
+# Tunel:   ssh -L 8080:localhost:8080 ubuntu@<ip>  e abrir http://localhost:8080
+#
+# Segredos do Airflow ficam em orquestracao/.env (modelo em .env.example); os do
+# projeto (PAR do bucket, URL do healthchecks), no .env da raiz. Nenhum vai para o Git.
+
+x-airflow-comum: &airflow-comum
+  image: apache/airflow:3.3.2-python3.12
+  env_file:
+    - .env
+    - ../.env
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${POSTGRES_SENHA}@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${FERNET_KEY}
+    AIRFLOW__API_AUTH__JWT_SECRET: ${JWT_SECRET}
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: utc
+    AIRFLOW__CORE__PARALLELISM: "4"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    # Caminhos do host, para os conteineres das tarefas.
+    RADAR_DIR: /home/ubuntu/radar
+    RADAR_IVY_DIR: /home/ubuntu/ivy
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "${AIRFLOW_UID}:0"
+  # Grupo docker do host: o scheduler cria os conteineres das tarefas.
+  group_add:
+    - "${DOCKER_GID}"
+  depends_on: &airflow-depende
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA}
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-airflow:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-comum
+    # O entrypoint da imagem migra o banco e cria o usuario; depois, o pool.
+    command: ["bash", "-c", "airflow pools set spark 1 'Um Spark por vez na VM'"]
+    environment:
+      <<: *airflow-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${ADMIN_USUARIO}
+      _AIRFLOW_WWW_USER_PASSWORD: ${ADMIN_SENHA}
+    restart: "no"
+
+  airflow-apiserver:
+    <<: *airflow-comum
+    command: api-server
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-depende
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-comum
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-depende
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-comum
+    command: dag-processor
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-depende
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-airflow:
