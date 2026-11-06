@@ -123,8 +123,7 @@ def semear_bronze(dados: Path, coletas: dict[datetime, list[dict]]) -> None:
     from compactacao.compactar import compactar_hora
     from coletor.config import Config
     cfg = Config(url="", dir_dados=dados, dir_log=dados / "logs", intervalo_s=30, timeout_s=15,
-                 backoff_max_s=300, alerta_sem_arquivo_min=10, user_agent="t", telegram_token=None,
-                 telegram_chat_id=None, healthcheck_url=None, healthcheck_compactacao_url=None,
+                 backoff_max_s=300, alerta_sem_arquivo_min=10, user_agent="t", healthcheck_url=None, healthcheck_compactacao_url=None,
                  compactacao_folga_min=20, compactacao_quarentena_h=48, compactacao_nivel_zstd=3)
     horas = set()
     for ts, veiculos in coletas.items():
