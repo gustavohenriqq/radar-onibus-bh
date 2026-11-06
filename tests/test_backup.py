@@ -70,8 +70,7 @@ def cfg(tmp_path: Path) -> Config:
     return Config(
         url="", dir_dados=tmp_path / "dados", dir_log=tmp_path / "logs",
         intervalo_s=30, timeout_s=15, backoff_max_s=300, alerta_sem_arquivo_min=10,
-        user_agent="teste", telegram_token=None, telegram_chat_id=None,
-        healthcheck_url=None, healthcheck_compactacao_url=None,
+        user_agent="teste", healthcheck_url=None, healthcheck_compactacao_url=None,
         compactacao_folga_min=20, compactacao_quarentena_h=48, compactacao_nivel_zstd=3,
     )
 

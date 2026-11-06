@@ -18,7 +18,6 @@ from datetime import datetime, timezone
 
 import requests
 
-from coletor.alerta import AvisoComIntervalo, Telegram
 from coletor.armazenamento import caminho_arquivo, gravar_atomico
 from coletor.config import Config
 
@@ -64,11 +63,10 @@ def espera_backoff(falhas_seguidas: int, intervalo_s: int, maximo_s: int) -> flo
 
 
 class Coletor:
-    def __init__(self, cfg: Config, sessao: requests.Session | None = None, alertas: AvisoComIntervalo | None = None):
+    def __init__(self, cfg: Config, sessao: requests.Session | None = None):
         self.cfg = cfg
         self.sessao = sessao or requests.Session()
         self.sessao.headers["User-Agent"] = cfg.user_agent
-        self.alertas = alertas or AvisoComIntervalo(Telegram(cfg.telegram_token, cfg.telegram_chat_id))
         self.parar = threading.Event()
         self._ultimo_sha: str | None = None
         self._falhas_seguidas = 0
@@ -92,15 +90,9 @@ class Coletor:
         if resp.status_code in (401, 403):
             # 401/403 nao e instabilidade, e a chave da URL que mudou. Sem
             # alerta, o servico continua "rodando" e grava nada para sempre.
+            # Quem alerta e o vigia, lendo este status no log de coletas.
             r.erro = "acesso negado: chave da URL provavelmente rotacionada"
-            self.alertas.avisar(
-                "chave",
-                f"[coletor-onibus] HTTP {resp.status_code} no feed. A chave de acesso "
-                "provavelmente mudou. Confira https://dados.pbh.gov.br/dataset/gtfs-rt "
-                "e atualize COLETOR_URL no .env.",
-            )
             return r
-        self.alertas.resolver("chave", "[coletor-onibus] Acesso ao feed normalizado.")
 
         if resp.status_code != 200:
             r.erro = f"http {resp.status_code}"
@@ -127,10 +119,9 @@ class Coletor:
         try:
             r.bytes_gravados = gravar_atomico(destino, corpo)
         except OSError as e:
+            # O prefixo "gravacao" e o que o vigia procura no log para alertar.
             r.erro = f"gravacao: {type(e).__name__}: {e}"
-            self.alertas.avisar("disco", f"[coletor-onibus] Falha ao gravar no disco: {type(e).__name__}: {e}")
             return r
-        self.alertas.resolver("disco", "[coletor-onibus] Gravacao em disco normalizada.")
         self._ultimo_sha = r.sha256
         r.arquivo = str(destino)
         return r
