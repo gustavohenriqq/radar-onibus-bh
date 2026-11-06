@@ -25,3 +25,6 @@ gold/target/
 gold/logs/
 gold/dbt_packages/
 gold/.user.yml
+
+# Airflow (fase 6)
+orquestracao/logs/

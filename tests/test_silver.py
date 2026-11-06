@@ -20,7 +20,7 @@ gtfs = pytest.importorskip("google.transit.gtfs_realtime_pb2")
 from compactacao import formato
 from compactacao.horas import Hora
 from silver.decodificar import COLUNAS, decodificar, taxa_de_duplicacao
-from silver.janela import horas_utc_do_dia
+from silver.janela import hora_utc, horas_utc_do_dia
 
 UTC = timezone.utc
 
@@ -54,6 +54,12 @@ def test_dia_de_bh_comeca_as_3h_utc():
     assert len(horas) == 24
     assert (horas[0].dt, horas[0].hh) == ("2026-09-15", "03")
     assert (horas[-1].dt, horas[-1].hh) == ("2026-09-16", "02")
+
+
+def test_hora_do_airflow_vira_hora_utc_do_bronze():
+    # O Airflow entrega o inicio do intervalo em ISO, com fuso; so a hora importa.
+    assert hora_utc("2026-11-05T14:00:00+00:00") == Hora("2026-11-05", "14")
+    assert hora_utc("2026-11-05T03") == Hora("2026-11-05", "03")
 
 
 def test_campo_ausente_vira_none_e_nao_zero():
@@ -226,3 +232,44 @@ def test_linha_de_comando_aceita_destino_relativo(spark, tmp_path, monkeypatch):
     monkeypatch.setattr(spark, "stop", lambda: None)
     assert processar.main(["--de", "2026-09-15", "--ate", "2026-09-15", "--bronze", ".", "--destino", "silver"]) == 0
     assert spark.read.format("delta").load(str(tmp_path / "silver")).count() == 1
+
+
+def test_hora_a_hora_da_o_mesmo_que_o_dia_inteiro(spark, tmp_path):
+    """O Airflow grava uma hora por vez, e fora de ordem quando recupera atraso."""
+    from silver.processar import processar_dia, processar_horas
+    t = datetime(2026, 9, 15, 10, 59, 30, tzinfo=UTC)
+    virada = t + timedelta(seconds=30)  # 11:00:00, outra hora
+    semear_bronze(tmp_path, {
+        t: [{"id": "a", "ts": t - timedelta(seconds=10)}, {"id": "b", "ts": t}],
+        virada: [{"id": "a", "ts": t - timedelta(seconds=10)}, {"id": "b", "ts": virada}],
+        virada + timedelta(hours=1): [{"id": "c", "ts": virada + timedelta(hours=1)}],
+    })
+    dir_h = tmp_path / "bronze_horario" / "vehicle_positions"
+    dia = str(tmp_path / "dia")
+    processar_dia(spark, date(2026, 9, 15), dir_h, dia)
+
+    hora = str(tmp_path / "hora")
+    for h in (Hora("2026-09-15", "12"), Hora("2026-09-15", "11"), Hora("2026-09-15", "10")):
+        processar_horas(spark, [h], dir_h, hora, optimize=False)
+    assert tabela(spark, hora) == tabela(spark, dia)
+    # De novo, outra ordem: nada muda
+    for h in (Hora("2026-09-15", "10"), Hora("2026-09-15", "11")):
+        r = processar_horas(spark, [h], dir_h, hora, optimize=False)
+        assert (r["inseridas"], r["atualizadas"]) == (0, 0)
+    assert tabela(spark, hora) == tabela(spark, dia)
+
+
+def test_hora_sem_conteiner_falha(spark, tmp_path, monkeypatch):
+    from silver import processar
+    monkeypatch.setattr(processar, "sessao", lambda memoria="4g": spark)
+    monkeypatch.setattr(spark, "stop", lambda: None)
+    destino = str(tmp_path / "silver")
+    assert processar.main(["--hora", "2026-09-15T10", "--bronze", str(tmp_path), "--destino", destino]) == 1
+
+
+def test_hora_e_janela_nao_vao_juntas():
+    from silver import processar
+    with pytest.raises(SystemExit):
+        processar.main(["--hora", "2026-09-15T10", "--de", "2026-09-15", "--ate", "2026-09-15"])
+    with pytest.raises(SystemExit):
+        processar.main(["--de", "2026-09-15"])

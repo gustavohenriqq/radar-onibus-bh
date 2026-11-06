@@ -7,6 +7,8 @@
 --
 -- Sequencia que recua (reajuste do GPS) nao gera passagem: compara com o maximo
 -- ja visto na viagem, nunca com a posicao anterior.
+--
+-- A viagem que comecou na vespera esta inteira no contexto de stg_posicoes.
 {{ config(partition_by=['data_bh']) }}
 
 with posicoes as (
@@ -71,10 +73,16 @@ horario_bh as (
         *,
         from_utc_timestamp(timestamp_seconds(passagem_unix), 'America/Sao_Paulo') as passagem_bh
     from calculado
+),
+
+com_data as (
+    select
+        *,
+        to_date(passagem_bh) as data_bh,
+        hour(passagem_bh) as hora_bh
+    from horario_bh
 )
 
-select
-    *,
-    to_date(passagem_bh) as data_bh,
-    hour(passagem_bh) as hora_bh
-from horario_bh
+-- As posicoes vem com contexto; so os dias da janela sao gravados.
+select * from com_data
+where {{ na_janela() }}

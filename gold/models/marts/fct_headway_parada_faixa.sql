@@ -18,6 +18,7 @@ with base as (
     from {{ ref('int_headways') }} h
     join {{ ref('faixa_horaria') }} f on h.hora_bh = f.hora_bh
     where h.headway_valido
+      and {{ na_janela('h.data_bh') }}
     group by h.route_id, h.direction_id, h.stop_id, h.data_bh, f.faixa_horaria, f.ordem_faixa
 ),
 
