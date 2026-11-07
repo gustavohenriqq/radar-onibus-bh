@@ -304,6 +304,36 @@ mês. A 0,82 GB por mês, o Standard enche por volta de setembro de 2027; antes
 disso, uma regra de ciclo de vida move o antigo para Archive, que é grátis até
 mais 10 GB e serve para restauração de desastre, mesmo levando horas.
 
+**Regra de ciclo de vida.** Em [`backup/ciclo_de_vida.json`](backup/ciclo_de_vida.json):
+contêiner (`.pb.zst`) com mais de 180 dias vai para Archive. O manifesto fica
+no Standard, porque é 1% do volume (15 MB em 1.287 horas) e é o que a
+conferência e a restauração leem primeiro. Aplicada no console em 07/11/2026,
+junto da policy `Allow service objectstorage-sa-saopaulo-1 to manage
+object-family in tenancy` no compartimento raiz. No console, o tipo do filtro
+precisa ser "Include by pattern": com "Include by prefix" o `*` vale como
+caractere literal e a regra não pega nada. Por que 180 dias:
+
+| Corte | Primeiro Archive | Standard estável | Grátis até |
+|---|---|---|---|
+| 90 dias | 13/12/2026 | ~2,6 GB | ~dez/2027 |
+| **180 dias** | **13/03/2027** | **~5,2 GB** | **~mar/2028** |
+| 300 dias | 11/07/2027 | ~8,5 GB | ~jul/2028 |
+
+Com 180 dias o teste de restauração cabe antes de julho de 2027 e a cota dura
+três meses a mais que com 90. Pela documentação do provedor, a retenção
+`nao-apagar` deixa o ciclo de vida mudar o tier, mas não apagar; Archive não
+cobra para restaurar, guarda no mínimo 90 dias e leva até cerca de 1 h para
+liberar o objeto, que fica baixável de 1 a 240 h (padrão 24 h).
+
+**Restaurar dia em Archive.** A URL pré-autenticada não pede reidratação: o
+dono marca os contêineres do dia no console (bucket, Objects, Restore) e, com
+o estado Restored, roda `backup.restaurar` como sempre. Esse caminho só será
+testado em março de 2027, com o primeiro dia arquivado. As três cópias de
+hoje (VM do coletor, VM de processamento e bucket) fazem disso só um caso de
+desastre. Se o estado do `backup.enviar` se perder, ele tenta conferir de novo
+as horas antigas e as que estiverem em Archive aparecem como falha até serem
+restauradas.
+
 ## Silver em Delta (fase 2)
 
 O Bronze guarda cada coleta como veio. A Silver guarda cada posição uma vez:

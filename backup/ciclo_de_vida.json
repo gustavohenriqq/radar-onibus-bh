@@ -1,0 +1,13 @@
+[
+  {
+    "name": "conteiner-para-archive-180d",
+    "action": "ARCHIVE",
+    "target": "objects",
+    "timeAmount": 180,
+    "timeUnit": "DAYS",
+    "isEnabled": true,
+    "objectNameFilter": {
+      "inclusionPatterns": ["vehicle_positions/*.pb.zst"]
+    }
+  }
+]
