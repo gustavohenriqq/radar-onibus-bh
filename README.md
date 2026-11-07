@@ -18,7 +18,7 @@ A pergunta que o projeto vai responder:
 | **1. Bronze e compactação** | Job horário, consolidação do bruto e backup fora da VM | **no ar desde 16/09/2026**; backup desde 23/10/2026 |
 | **2. Silver em Delta** | PySpark, deduplicação com MERGE | **pronta em 05/11/2026**: 52 dias e 87,6 milhões de posições; desde 06/11/2026 roda a cada hora pelo Airflow |
 | **3. Gold e dbt** | Headway, irregularidade e espera por linha e faixa horária | **pronta em 05/11/2026**: 311 linhas, 49,4 milhões de headways, conferida por uma segunda conta; corredor ficou de fora |
-| 4. Análise | Conclusão com recomendação numérica | |
+| **4. Análise** | Conclusão com recomendação numérica | **pronta em 06/11/2026**: em dia útil a irregularidade soma 2,9 min à espera (+50%), 20 linhas somam 55% disso; [docs/analise.md](docs/analise.md) |
 | 5. ML | Previsão de chegada e detecção de *bus bunching* | |
 | **6. Orquestração** | Airflow com backfill por janela de data | **no ar desde 06/11/2026**: Silver e Gold a cada hora fechada, reprocessamento idempotente por janela |
 
@@ -752,6 +752,11 @@ gold/                dbt: modelos, testes, seeds, a segunda conta (conferencia.p
 orquestracao/
   docker-compose.yml Airflow da VM de processamento: Postgres, scheduler, API
   dags/              DAG horária, DAG de reprocessamento e as regras de calendário
+analise/
+  calcular.py        Fase 4: espera extra e bunching a partir da Gold (roda na VM)
+  graficos.py        PNGs de docs/img a partir dos CSVs
+  saida/             CSVs da última rodada, com as conferências
+docs/analise.md      conclusão da Fase 4, com gráficos e onde conferir cada número
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
 tests/               99 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver e Gold
