@@ -1,0 +1,7 @@
+tipo_dia,alta_frequencia,linha_dia_faixa,regular_min_peso_igual,excesso_min_peso_igual
+dia_util,False,57757,13.979,3.389
+dia_util,True,11516,5.693,2.327
+domingo_feriado,False,11509,22.728,2.815
+domingo_feriado,True,158,6.111,2.958
+sabado,False,10984,18.243,2.561
+sabado,True,341,5.92,1.867
