@@ -469,6 +469,10 @@ radar_horario (VM 2, uma execução por hora UTC)
   na última hora do domingo:   VACUUM da Silver e da Gold, 7 dias de retenção
 
 radar_reprocessar (manual): de, até e camadas -> Silver e Gold da janela
+
+radar_limpeza (diária, 06:30 UTC, pool spark)
+  limpar_banco     airflow db clean do que tem mais de 30 dias, sem arquivar
+  limpar_logs      apaga log de tarefa com mais de 30 dias e as pastas vazias
 ```
 
 **Decisão: Airflow dentro da VM de processamento.** A VM tem 2 OCPU e 12 GB. O
@@ -504,6 +508,26 @@ compactação e o backup da VM do coletor.
 
 **Alerta.** A DAG pinga o check `processamento-horario` no fim de cada hora e
 manda `/fail` quando uma tarefa falha. A URL fica no `.env`.
+
+**Limpeza do próprio Airflow.** Cada execução deixa log por tarefa e linhas no
+Postgres; sem limpeza, crescem sem fim (medido em 07/11/2026: 33 MB de log e
+13 MB de banco depois de 47 execuções, cerca de 0,6 MB de log por hora). A DAG
+`radar_limpeza` apaga o que tem mais de 30 dias, todo dia às 06:30 UTC. As duas
+tarefas usam o pool `spark`, então esperam o Spark da hora acabar. Os logs do
+`radar_reprocessar` ficam para sempre: ele roda à mão, poucas vezes, e o log é a
+prova do que foi refeito e quando. No banco ele vence como o resto, por dois
+limites do Airflow 3.3.2, achados no teste em modo seco:
+
+- `--exclude-dag-ids` quebra o comando: a configuração do `db clean` diz que
+  `deadline`, `asset_event` e `task_reschedule` têm `dag_id`, mas as tabelas não
+  têm, e limpar `dag_run` puxa `deadline` junto.
+- O processo da tarefa não enxerga o banco de metadados (o Airflow 3 troca a URL
+  por uma inválida). A tarefa remonta a URL só para o subprocesso do `db clean`,
+  com a senha do `orquestracao/.env` que o compose já usa.
+
+O `db clean` mantém a última execução agendada de cada DAG, então o agendamento
+não recua. Regras e testes em `orquestracao/dags/radar_limpeza_regras.py` e
+`tests/test_limpeza_airflow.py`.
 
 **Hora que nunca chega.** Se o coletor ficar parado uma hora inteira, o manifesto
 dela nunca existe. O sensor espera 6 h, falha e avisa. Como a DAG roda uma hora
@@ -716,10 +740,6 @@ nada também para de pingar e dispara o alerta.
   por 6 horas, até o check `backup-horario` avisar e o link ser trocado. Nada
   se perdeu: os contêineres ficam na VM e o envio retoma de onde parou. O link
   atual vence em 31/12/2030.
-- **Logs e banco do Airflow crescem sem limite.** São 24 execuções por dia, cada
-  uma com log por tarefa em `orquestracao/logs` e linhas no Postgres do Airflow.
-  Ainda não há limpeza automática (`airflow db clean` e apagar logs antigos); até
-  ela existir, conferir o disco da VM de processamento de tempos em tempos.
 
 ## Estrutura
 
@@ -751,7 +771,8 @@ gold/                dbt: modelos, testes, seeds, a segunda conta (conferencia.p
                      e a impressão digital por dia (digitais.py)
 orquestracao/
   docker-compose.yml Airflow da VM de processamento: Postgres, scheduler, API
-  dags/              DAG horária, DAG de reprocessamento e as regras de calendário
+  dags/              DAG horária, DAG de reprocessamento, DAG de limpeza e as regras
+                     de calendário e de limpeza
 analise/
   calcular.py        Fase 4: espera extra e bunching a partir da Gold (roda na VM)
   graficos.py        PNGs de docs/img a partir dos CSVs
@@ -759,7 +780,8 @@ analise/
 docs/analise.md      conclusão da Fase 4, com gráficos e onde conferir cada número
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
-tests/               99 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver e Gold
+tests/               108 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
+                     Gold e limpeza do Airflow
 ```
 
 ## Agradecimento
