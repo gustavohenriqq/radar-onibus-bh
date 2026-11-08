@@ -62,6 +62,29 @@ def test_sem_alerta_que_pague_o_limiar_e_nunca_alertar():
 
 # --- Spark: so as passagens conhecidas no instante da decisao entram ---------
 
+def test_alvo_ja_passado_na_decisao_sai_do_recorte():
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("sklearn")
+    from ml import medir_alvo_passado as m
+
+    chave = {"viagem_id": ["a", "b", "c", "d"], "stop_sequence": [1, 1, 1, 1],
+             "decisao_unix": [10.0, 20.0, 30.0, 40.0], "conjunto": ["teste"] * 4}
+    pv = pd.DataFrame({**chave, "alvo": [True, False, True, False],
+                       "prob": [0.9, 0.2, 0.1, 0.8], "alerta": [True, False, False, True]})
+    # c ja tinha passado por s+10 quando a decisao foi tomada.
+    ex = pd.DataFrame({**chave, "minutos_ate_alvo": [5.0, 3.0, -0.5, 2.0], "h_rel": [0.3, 1.0, 0.9, 0.4]})
+    r = m.medir(pv, ex).set_index("recorte")
+    assert r.loc["todos", "exemplos"] == 4
+    assert r.loc["sem_alvo_passado", "exemplos"] == 3
+    assert r.loc["so_alvo_passado", "exemplos"] == 1
+    assert r.loc["sem_alvo_passado", "cobertura"] == 1.0
+    c = m.contar_todos(ex).set_index("conjunto")
+    assert c.loc["teste", "alvo_passado"] == 1
+
+    with pytest.raises(ValueError):
+        m.medir(pv, ex.iloc[:3])
+
+
 @pytest.fixture(scope="module")
 def spark():
     pytest.importorskip("pyspark")

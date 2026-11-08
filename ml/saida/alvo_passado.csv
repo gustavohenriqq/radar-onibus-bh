@@ -1,0 +1,8 @@
+conjunto,exemplos_conjunto,alvo_passado,recorte,exemplos,taxa_base,pr_auc_gbm,pr_auc_persistencia,alertas,precisao,cobertura
+treino,2739335,20453,contagem,,,,,,,
+validacao,982506,13398,todos,982506.0,0.1517,0.523,0.3991,34784.0,0.6816,0.1591
+validacao,982506,13398,sem_alvo_passado,969108.0,0.1505,0.5231,0.4002,34331.0,0.6786,0.1597
+validacao,982506,13398,so_alvo_passado,13398.0,0.2373,0.4911,0.391,453.0,0.9051,0.1289
+teste,1407464,22460,todos,1407464.0,0.1561,0.5113,0.3919,49154.0,0.674,0.1508
+teste,1407464,22460,sem_alvo_passado,1385004.0,0.1551,0.5129,0.3949,48697.0,0.6727,0.1525
+teste,1407464,22460,so_alvo_passado,22460.0,0.2151,0.399,0.3088,457.0,0.8162,0.0772

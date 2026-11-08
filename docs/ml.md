@@ -162,7 +162,9 @@ acima valem.
 | 20/10 a 26/10 | 2.739.335 | 0,523 | 0,399 | 0,152 |
 
 O ganho fica entre 0,116 e 0,124 nas três semanas. Com uma semana só de treino
-o modelo já chega perto do resultado final.
+o modelo já chega perto do resultado final. A semana de 20/10 a 26/10 é a
+própria validação, onde a configuração foi escolhida: o 0,523 dela sai
+levemente otimista. O teste não depende dessa escolha.
 
 ### 5.3 Decis
 
@@ -239,8 +241,10 @@ PSI para cima. A coluna quase não pesa no modelo (seção 5.5).
    (`ml/saida/frente.csv`): a passagem da frente chegou depois da decisão em
    0,014% a 1,07% dos 5.129.305 exemplos (no teste, 0,018% a 1,10%). São dois
    limites porque a Gold não guarda o instante exato da posição seguinte do
-   GPS: o mais cedo possível e a regra conservadora da montagem. Pela regra,
-   85% desses casos chegam até 30 s depois da decisão e nenhum passa de 5 min.
+   GPS: o mais cedo possível e a regra conservadora da montagem. Só a passagem
+   em s, que entra em `h_s`, chega tarde pela regra em 48.557 exemplos (0,95%):
+   85% deles até 30 s depois da decisão e nenhum passa de 5 min. O atraso das
+   passagens em s-1, s-3 e s-5, que entram em `dh_*`, não foi medido.
    A persistência usa o mesmo `h_rel`, então o efeito vale para o modelo e para
    o baseline, nas três fases. Em produção, basta usar `h_s` só depois que a
    passagem da frente existir.
@@ -251,6 +255,20 @@ PSI para cima. A coluna quase não pesa no modelo (seção 5.5).
    `frac_percurso`) vem do mapa aprendido sobre todo o histórico, inclusive o
    período de teste. É estrutura que muda pouco, mas não é estritamente
    anterior.
+10. **Alvo que já passou.** Quando um único intervalo de GPS cobre s e s+10, B
+    já passou por s+10 no instante da decisão (`minutos_ate_alvo` ≤ 0). As
+    features não veem o alvo, mas esses exemplos não são previsão: 1,10% dos
+    5.129.305 (0,75% no treino, 1,36% na validação, 1,60% no teste). Medido
+    com [`ml/medir_alvo_passado.py`](../ml/medir_alvo_passado.py)
+    (`ml/saida/alvo_passado.csv`) sobre as previsões já gravadas, sem treinar
+    nem escolher nada de novo. Sem eles, a PR-AUC do teste fica em 0,513
+    (persistência 0,395), contra 0,511 e 0,392 com eles: não inflam o
+    resultado. Nesses casos o modelo acerta menos (PR-AUC 0,399). Em produção,
+    basta não emitir previsão quando o intervalo já cobre s+10.
+11. **Só entra quem chega a s+10.** O exemplo só existe se a passagem de B em
+    s+10 tem intervalo válido e rotulável. Na hora da decisão isso ainda não se
+    sabe. Viagem que some do feed ou termina antes de s+10 fica fora, e as
+    métricas valem só para quem chega lá.
 
 ## 7. Como reproduzir
 
@@ -265,6 +283,7 @@ docker run --rm --memory 4g -v /home/ubuntu/radar:/app -w /app radar-ml:dev pyth
 docker run --rm --memory 4g -v /home/ubuntu/radar:/app -w /app radar-ml:dev python -m ml.treinar --teste
 docker run --rm -v /home/ubuntu/radar:/app -v /home/ubuntu/ivy:/root/.ivy2.5.2 radar-ml:dev python -m ml.publicar
 docker run --rm --memory 4g -e ML_MEMORIA=3g -v /home/ubuntu/radar:/app -v /home/ubuntu/ivy:/root/.ivy2.5.2 -w /app radar-ml:dev python -m ml.medir_frente
+docker run --rm --memory 4g -v /home/ubuntu/radar:/app -w /app radar-ml:dev python -m ml.medir_alvo_passado
 ```
 
 Gráficos, no Windows, com os CSVs copiados para `ml/saida/`:

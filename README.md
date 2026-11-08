@@ -817,12 +817,13 @@ ml/
   publicar.py        previsões de validação e teste para gold/ml/previsao_bunching
   graficos.py        PNGs de docs/img a partir dos CSVs
   medir_frente.py    ressalva 7: passagem do ônibus da frente conhecida na decisão?
+  medir_alvo_passado.py  ressalva 10: B já tinha passado por s+10 na decisão?
   saida/             CSVs da rodada de 08/11
 docs/ml.md           conclusão da Fase 5, com gráficos e ressalvas
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
 Dockerfile.ml        imagem da Fase 5: a do Spark mais pandas e scikit-learn
-tests/               119 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
+tests/               120 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
                      Gold, limpeza do Airflow e o que o modelo da Fase 5 pode ver
 ```
 
