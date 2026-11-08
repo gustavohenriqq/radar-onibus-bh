@@ -1,0 +1,4 @@
+config,learning_rate,max_leaf_nodes,min_samples_leaf,iteracoes,pr_auc_validacao
+0,0.1,31,200,400,0.5204
+1,0.1,63,500,400,0.523
+2,0.05,127,1000,400,0.5229

@@ -1,0 +1,2 @@
+conjunto,limiar,equilibrio,exemplos,positivos,alertas,acertos,precisao,cobertura,custo_modelo,custo_nunca,custo_sempre
+validacao,0.5904157032503188,0.6,982506,149054,34784,23708,0.6815777368905244,0.15905644934050747,14763520.0,14905400.0,36927880.0

@@ -1,0 +1,4 @@
+conjunto,dias,exemplos,taxa_alvo,exemplos_nao_colado_em_s,taxa_alvo_nao_colado_em_s,linhas,minutos_ate_alvo_mediana,atras_censurado,lider_nulo,trecho_nulo
+teste,8,1407464,0.1561,1232026,0.1075,127,10.75,0.6741,0.0213,0.159
+treino,14,2739335,0.1492,2414614,0.1012,132,10.47,0.6846,0.0227,0.1432
+validacao,5,982506,0.1517,866648,0.1042,124,10.46,0.6907,0.0214,0.153
