@@ -232,12 +232,18 @@ PSI para cima. A coluna quase não pesa no modelo (seção 5.5).
    permitidas sem parar antes. Mais árvores talvez ajudem um pouco, mas a
    diferença entre configurações bem distintas foi de 0,003.
 7. **Ônibus da frente em s.** O intervalo `h_s` (e `h_rel`, `dh_*`) usa a
-   passagem do ônibus da frente por s. O código confere se o líder dele e o
-   ônibus de trás já eram conhecidos no instante da decisão, mas não confere
-   o da frente: se o GPS dele demorou mais que o de B, o intervalo entra antes
-   de existir. A passagem dele é anterior à de B, então o caso pede um
-   intervalo de GPS bem maior que o de B; a fração não foi medida. Afeta a
-   coluna que mais pesa, nas três fases (validação, backtest e teste) por igual.
+   passagem do ônibus da frente por s (e por s-1, s-3 e s-5). A montagem
+   confere se essa passagem já era conhecida na decisão, mas só usa a
+   conferência para esconder `lider_rel`, não `h_s`. A fração foi medida
+   depois, com [`ml/medir_frente.py`](../ml/medir_frente.py)
+   (`ml/saida/frente.csv`): a passagem da frente chegou depois da decisão em
+   0,014% a 1,07% dos 5.129.305 exemplos (no teste, 0,018% a 1,10%). São dois
+   limites porque a Gold não guarda o instante exato da posição seguinte do
+   GPS: o mais cedo possível e a regra conservadora da montagem. Pela regra,
+   85% desses casos chegam até 30 s depois da decisão e nenhum passa de 5 min.
+   A persistência usa o mesmo `h_rel`, então o efeito vale para o modelo e para
+   o baseline, nas três fases. Em produção, basta usar `h_s` só depois que a
+   passagem da frente existir.
 8. **Latência do feed.** O instante da decisão não soma o atraso entre o evento
    e a primeira coleta (mediana de 41 s, ver o README). Na operação, a
    previsão sairia cerca de um minuto depois.
@@ -258,6 +264,7 @@ docker run --rm --memory 4g -e ML_MEMORIA=3g -v /home/ubuntu/radar:/app -v /home
 docker run --rm --memory 4g -v /home/ubuntu/radar:/app -w /app radar-ml:dev python -m ml.treinar
 docker run --rm --memory 4g -v /home/ubuntu/radar:/app -w /app radar-ml:dev python -m ml.treinar --teste
 docker run --rm -v /home/ubuntu/radar:/app -v /home/ubuntu/ivy:/root/.ivy2.5.2 radar-ml:dev python -m ml.publicar
+docker run --rm --memory 4g -e ML_MEMORIA=3g -v /home/ubuntu/radar:/app -v /home/ubuntu/ivy:/root/.ivy2.5.2 -w /app radar-ml:dev python -m ml.medir_frente
 ```
 
 Gráficos, no Windows, com os CSVs copiados para `ml/saida/`:

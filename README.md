@@ -816,6 +816,7 @@ ml/
   custo.py           hipótese de custo e ponto de equilíbrio
   publicar.py        previsões de validação e teste para gold/ml/previsao_bunching
   graficos.py        PNGs de docs/img a partir dos CSVs
+  medir_frente.py    ressalva 7: passagem do ônibus da frente conhecida na decisão?
   saida/             CSVs da rodada de 08/11
 docs/ml.md           conclusão da Fase 5, com gráficos e ressalvas
 Dockerfile.spark     imagem do Spark com Delta
