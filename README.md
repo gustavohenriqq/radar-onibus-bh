@@ -19,7 +19,7 @@ A pergunta que o projeto vai responder:
 | **2. Silver em Delta** | PySpark, deduplicação com MERGE | **pronta em 05/11/2026**: 52 dias e 87,6 milhões de posições; desde 06/11/2026 roda a cada hora pelo Airflow |
 | **3. Gold e dbt** | Headway, irregularidade e espera por linha e faixa horária | **pronta em 05/11/2026**: 311 linhas, 49,4 milhões de headways, conferida por uma segunda conta; corredor ficou de fora |
 | **4. Análise** | Conclusão com recomendação numérica | **pronta em 06/11/2026**: em dia útil a irregularidade soma 2,9 min à espera (+50%), 20 linhas somam 55% disso; [docs/analise.md](docs/analise.md) |
-| 5. ML | Previsão de chegada e detecção de *bus bunching* | |
+| **5. ML** | Prever ônibus colados dez paradas antes | **pronta em 08/11/2026**: no teste, PR-AUC 0,511 contra 0,392 da persistência; com a hipótese de custo, alertar poupa só 0,8%; [docs/ml.md](docs/ml.md) |
 | **6. Orquestração** | Airflow com backfill por janela de data | **no ar desde 06/11/2026**: Silver e Gold a cada hora fechada, reprocessamento idempotente por janela |
 
 ## O feed, medido
@@ -808,10 +808,23 @@ analise/
   graficos.py        PNGs de docs/img a partir dos CSVs
   saida/             CSVs da última rodada, com as conferências
 docs/analise.md      conclusão da Fase 4, com gráficos e onde conferir cada número
+ml/
+  montar.py          Fase 5: exemplos a partir da Gold, um dia por vez (Spark, na VM)
+  features.py        colunas permitidas e o motivo de cada proibida
+  divisao.py         treino, validação e teste por semanas, e os blocos do backtest
+  treinar.py         baselines, HistGBM, backtest, limiar pelo custo e o teste único
+  custo.py           hipótese de custo e ponto de equilíbrio
+  publicar.py        previsões de validação e teste para gold/ml/previsao_bunching
+  graficos.py        PNGs de docs/img a partir dos CSVs
+  medir_frente.py    ressalva 7: passagem do ônibus da frente conhecida na decisão?
+  medir_alvo_passado.py  ressalva 10: B já tinha passado por s+10 na decisão?
+  saida/             CSVs da rodada de 08/11
+docs/ml.md           conclusão da Fase 5, com gráficos e ressalvas
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
-tests/               108 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
-                     Gold e limpeza do Airflow
+Dockerfile.ml        imagem da Fase 5: a do Spark mais pandas e scikit-learn
+tests/               120 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
+                     Gold, limpeza do Airflow e o que o modelo da Fase 5 pode ver
 ```
 
 ## Agradecimento

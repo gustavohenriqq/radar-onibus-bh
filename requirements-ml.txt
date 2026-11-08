@@ -1,0 +1,4 @@
+# Fase 5: treino e avaliacao do modelo de bunching, por cima da imagem do Spark
+pandas==2.3.3
+pyarrow==21.0.0
+scikit-learn==1.7.2

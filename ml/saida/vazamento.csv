@@ -1,0 +1,2 @@
+modelo,conjunto,recorte,exemplos,taxa_base,roc_auc,pr_auc,brier
+gbm_com_alvo_disfarcado,validacao,todos,982506,0.1517,0.9981,0.9796,0.00991

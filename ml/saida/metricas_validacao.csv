@@ -1,0 +1,9 @@
+modelo,conjunto,recorte,exemplos,taxa_base,roc_auc,pr_auc,brier
+persistencia,validacao,todos,982506,0.1517,0.7533,0.3991,
+persistencia,validacao,nao_colado_em_s,866648,0.1042,0.6605,0.2686,
+taxa_hist,validacao,todos,982506,0.1517,0.7847,0.4051,0.10451
+taxa_hist,validacao,nao_colado_em_s,866648,0.1042,0.7149,0.2433,0.08511
+logistica,validacao,todos,982506,0.1517,0.7879,0.412,0.1076
+logistica,validacao,nao_colado_em_s,866648,0.1042,0.7294,0.2535,0.08628
+gbm,validacao,todos,982506,0.1517,0.8619,0.523,0.09447
+gbm,validacao,nao_colado_em_s,866648,0.1042,0.839,0.3757,0.07671
