@@ -37,10 +37,10 @@ ANALISE = (date(2026, 9, 15), date(2026, 11, 5))
 REPO = "https://github.com/gustavohenriqq/radar-onibus-bh"
 HORAS_MIN_PARADA = 25  # na janela de 28 dias (a analise usou 50 h em 52 dias)
 
-# Paleta Midnight Atlas.
-FUNDO, PAINEL, BORDA = "#0A1024", "#0F1839", "rgba(148,163,255,.14)"
+# Paleta noturna: ambar do letreiro, coral da espera extra, ciano do regular.
+FUNDO, PAINEL, BORDA, BORDA_FORTE = "#060812", "#0E1430", "rgba(148,163,255,.14)", "rgba(148,163,255,.32)"
 TEXTO, SUAVE, APAGADO, GRADE = "#F2F5FF", "#B8C2E6", "#8E99C6", "rgba(148,163,255,.12)"
-CIANO, VIOLETA, MENTA, CORAL, DOURADO = "#22D3EE", "#8B7CF6", "#34D399", "#FB7185", "#F5B83D"
+CIANO, VIOLETA, MENTA, CORAL, DOURADO = "#22D3EE", "#A78BFA", "#34D399", "#FF5A79", "#FFB547"
 
 TIPOS_DIA = {"dia_util": "Dia útil", "sabado": "Sábado", "domingo_feriado": "Domingo e feriado", "todos": "Todos"}
 TIPOS_DIA_FRASE = {"dia_util": "em dia útil", "sabado": "no sábado", "domingo_feriado": "no domingo e feriado",
@@ -100,6 +100,12 @@ def dados(sql: str, params=()) -> pd.DataFrame:
         raise BancoFora
 
 
+def painel(chave: str, func):
+    """Quadro dentro de um painel com classe propria (st-key-sec_*), estilizado no CSS."""
+    with st.container(key=f"sec_{chave}"):
+        quadro(func)
+
+
 def quadro(func):
     """Cada visual carrega separado: se o banco cair, os outros quadros continuam de pe.
     Qualquer outra falha (permissao, tabela) derruba so o quadro, sem traceback ao publico."""
@@ -113,54 +119,326 @@ def quadro(func):
 
 
 # ---------- aparencia ----------
+# Direcao: letreiro de onibus a noite. Marca, linhas e numeros em matriz de pontos ambar (Doto);
+# numero gigante da espera extra em Archivo condensada com degrade coral; ruas animadas com os
+# mesmos onibus em grupos e espacados; cada quadro com a sua cor de destaque.
 
 CSS = f"""
 <style>
-.stApp {{ background: radial-gradient(1200px 600px at 10% -10%, rgba(34,211,238,.10), transparent 60%),
-          radial-gradient(900px 500px at 100% 0%, rgba(139,124,246,.12), transparent 60%), {FUNDO}; }}
-.block-container {{ padding-top: 3.6rem; max-width: 1400px; }}
+@import url('https://fonts.googleapis.com/css2?family=Doto:wght@600..900&display=swap');
+:root {{ --fundo: {FUNDO}; --painel: {PAINEL}; --borda: {BORDA}; --texto: {TEXTO}; --suave: {SUAVE};
+         --apagado: {APAGADO}; --ambar: {DOURADO}; --ciano: {CIANO}; --coral: {CORAL}; --violeta: {VIOLETA};
+         --menta: {MENTA}; --curva: cubic-bezier(.2,.8,.2,1); }}
+.stApp {{ background:
+    radial-gradient(900px 620px at 104% -8%, rgba(255,90,121,.20), transparent 60%),
+    radial-gradient(1000px 640px at -8% 0%, rgba(34,211,238,.15), transparent 60%),
+    radial-gradient(1000px 700px at 50% 115%, rgba(167,139,250,.13), transparent 60%),
+    radial-gradient(rgba(170,180,255,.075) 1px, transparent 1.3px) 0 0 / 24px 24px,
+    var(--fundo); }}
+.block-container {{ padding-top: 2.4rem; padding-bottom: 4rem; max-width: 1380px; }}
 header[data-testid="stHeader"] {{ background: transparent; }}
-h1, h2, h3 {{ color: {TEXTO}; letter-spacing: -.01em; }}
-.olho {{ color: {DOURADO}; font-size: .8rem; font-weight: 700; letter-spacing: .14em; margin: 2.2rem 0 .1rem; }}
-.titulo {{ color: {TEXTO}; font-size: 1.6rem; font-weight: 700; margin: 0 0 .3rem; }}
-.nota {{ color: {SUAVE}; font-size: .95rem; margin: 0 0 .8rem; }}
-.marca {{ font-size: 2.6rem !important; font-weight: 800; color: {TEXTO}; margin: 0; line-height: 1.1; }}
-.marca span {{ color: {CIANO}; }}
-.selo {{ display: inline-block; border: 1px solid {BORDA}; background: {PAINEL}; color: {SUAVE};
-         border-radius: 999px; padding: .25rem .8rem; font-size: .85rem; margin-top: .5rem; }}
-.manchete {{ color: {TEXTO}; font-size: 1.35rem; line-height: 1.5; margin: .6rem 0 1rem; max-width: 62rem; }}
-.manchete b {{ color: {CORAL}; }}
-.card {{ background: linear-gradient(180deg, rgba(24,34,78,.78), rgba(12,18,44,.78)); border: 1px solid {BORDA};
-         border-radius: 20px; padding: 1rem 1.2rem; height: 100%; }}
-.card .rotulo {{ color: {SUAVE}; font-size: .9rem; }}
-.card .valor {{ font-size: 2.3rem; font-weight: 800; line-height: 1.2; }}
-.card .sub {{ color: {APAGADO}; font-size: .85rem; }}
-[data-testid="stHorizontalBlock"] + div [data-testid="stCaptionContainer"] {{ margin-top: .6rem; }}
+@keyframes subir {{ from {{ opacity: 0; transform: translateY(18px); filter: blur(6px); }}
+                    to {{ opacity: 1; transform: none; filter: none; }} }}
+@keyframes crescer {{ from {{ transform: scaleX(0); }} to {{ transform: scaleX(1); }} }}
+@keyframes surgir {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
+@keyframes andar {{ from {{ transform: translateX(-50%); }} to {{ transform: translateX(0); }} }}
+@keyframes rolar {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
+@keyframes girar {{ to {{ transform: rotate(360deg); }} }}
+@keyframes pulsar {{ 0%, 100% {{ box-shadow: 0 0 0 0 rgba(52,211,153,.55); }}
+                     70% {{ box-shadow: 0 0 0 9px rgba(52,211,153,0); }} }}
+@keyframes piscar {{ 0%, 92%, 100% {{ opacity: 1; }} 95% {{ opacity: .55; }} }}
+
+/* topo: letreiro de LED */
+.topo {{ display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .9rem 1.4rem;
+         margin-bottom: 1.1rem; }}
+.topo .dir {{ display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }}
+.letreiro {{ display: inline-flex; align-items: center; gap: .9rem; background: #030409;
+             border: 1px solid #2A2410; border-radius: 14px; padding: .6rem 1.2rem .55rem .65rem;
+             box-shadow: inset 0 0 0 4px #0A0B12, 0 0 60px -6px rgba(255,181,71,.28); }}
+.letreiro .placa {{ font-family: 'Doto', monospace; font-weight: 900; font-size: 2.2rem; line-height: 1;
+                    color: #030409; background: var(--ambar); border-radius: 8px; padding: .3rem .5rem .2rem;
+                    box-shadow: 0 0 18px rgba(255,181,71,.55); }}
+.letreiro .destino {{ font-family: 'Doto', monospace; font-weight: 800; font-size: 2.45rem; line-height: 1;
+                      color: var(--ambar); letter-spacing: .02em; text-transform: uppercase;
+                      text-shadow: 0 0 6px rgba(255,181,71,.65), 0 0 22px rgba(255,181,71,.3);
+                      animation: piscar 9s infinite; }}
+.selo {{ display: inline-flex; align-items: center; gap: .55rem; color: var(--suave); font-size: .9rem;
+         background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.3); border-radius: 99px;
+         padding: .35rem .85rem; }}
+.selo::before {{ content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--menta);
+                 animation: pulsar 2.2s infinite; }}
+.topo a.git {{ color: var(--texto); text-decoration: none; font-size: .9rem; font-weight: 600;
+               border: 1px solid var(--borda); border-radius: 99px; padding: .35rem .9rem; }}
+.topo a.git:hover {{ border-color: var(--ciano); color: var(--ciano); }}
+
+/* filtros: barra que acompanha a rolagem */
+div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; padding-top: 2rem; margin-top: -2rem;
+    background: linear-gradient(180deg, var(--fundo) 0, var(--fundo) 45%, transparent 100%); }}
+.st-key-filtros {{ background: rgba(9,12,28,.86);
+                   border: 1px solid var(--borda); border-radius: 18px; padding: .7rem 1rem .25rem;
+                   backdrop-filter: blur(14px) saturate(150%); box-shadow: 0 18px 40px -26px rgba(0,0,0,.9); }}
+.st-key-filtros label p {{ color: var(--ambar); font-size: .74rem; font-weight: 800; letter-spacing: .14em;
+                          text-transform: uppercase; }}
+
+/* hero: o numero da espera extra */
+.st-key-hero {{ margin-top: 1.3rem; }}
+.hero {{ position: relative; overflow: hidden; isolation: isolate; border-radius: 32px;
+         padding: 2.6rem 2.8rem 1.5rem; border: 1px solid rgba(255,255,255,.10);
+         background: linear-gradient(135deg, #1D0A27 0%, #0B1034 52%, #032230 100%);
+         box-shadow: 0 50px 120px -60px rgba(255,90,121,.7), inset 0 1px 0 rgba(255,255,255,.08);
+         animation: subir .8s var(--curva) both; }}
+.hero::before {{ content: ""; position: absolute; inset: -60%; z-index: -2; opacity: .8; filter: blur(70px);
+                 background: conic-gradient(from 0deg, transparent 0deg, rgba(255,90,121,.42) 60deg,
+                   rgba(255,181,71,.16) 120deg, transparent 170deg, rgba(34,211,238,.36) 240deg,
+                   rgba(167,139,250,.24) 300deg, transparent 360deg);
+                 animation: girar 34s linear infinite; }}
+.hero::after {{ content: ""; position: absolute; inset: 0; z-index: -1;
+                background: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1.4px) 0 0 / 16px 16px;
+                -webkit-mask-image: linear-gradient(180deg, #000, transparent 75%);
+                mask-image: linear-gradient(180deg, #000, transparent 75%); }}
+.hero-grade {{ display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 2.6rem;
+               align-items: center; }}
+.kicker {{ display: inline-flex; align-items: center; gap: .55rem; color: var(--ambar); font-size: .76rem;
+           font-weight: 800; letter-spacing: .16em; text-transform: uppercase; background: rgba(255,181,71,.10);
+           border: 1px solid rgba(255,181,71,.38); border-radius: 99px; padding: .38rem .85rem; }}
+.kicker::before {{ content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--ambar);
+                   box-shadow: 0 0 10px var(--ambar); }}
+.big {{ display: flex; align-items: flex-start; margin: 1rem 0 .3rem; font-size: clamp(6.2rem, 13.5vw, 12.5rem);
+        font-weight: 900; font-stretch: 62%; line-height: .8; letter-spacing: -.03em; color: transparent;
+        background: linear-gradient(180deg, #FFE3E9 0%, #FF8099 40%, #FF2D5A 100%);
+        -webkit-background-clip: text; background-clip: text;
+        filter: drop-shadow(0 0 34px rgba(255,45,90,.5)); animation: subir .9s var(--curva) both .15s; }}
+.big .un {{ font-size: .3em; font-stretch: 80%; letter-spacing: 0; margin: .3em 0 0 .12em; }}
+.big-sub {{ color: var(--texto); font-size: 1.6rem; font-weight: 800; font-stretch: 85%; line-height: 1.22;
+            max-width: 31rem; animation: subir .9s var(--curva) both .3s; }}
+.big-sub em {{ font-style: normal; color: #FF8099; }}
+.comp {{ margin-top: 1.5rem; max-width: 36rem; animation: subir .9s var(--curva) both .45s; }}
+.comp-topo {{ display: flex; justify-content: space-between; align-items: baseline; color: var(--suave);
+              font-size: .78rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+              margin-bottom: .45rem; }}
+.comp-topo b {{ color: var(--texto); font-size: 1.45rem; letter-spacing: 0; font-stretch: 75%; }}
+.trilha {{ display: flex; height: 3.2rem; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.06);
+           font-size: 1.25rem; font-weight: 900; font-stretch: 75%; }}
+.trilha .reg {{ width: var(--w); display: flex; align-items: center; padding: 0 1rem; color: #03141B;
+                background: linear-gradient(90deg, #0E7490, var(--ciano)); transform-origin: left;
+                animation: crescer 1.1s var(--curva) both .6s; white-space: nowrap; }}
+.trilha .ext {{ flex: 1; display: flex; align-items: center; justify-content: flex-end; padding: 0 1rem;
+                color: #2B0510; white-space: nowrap; animation: surgir .6s ease both 1.5s;
+                background: repeating-linear-gradient(135deg, #FF5A79 0 12px, #FF2D5A 12px 24px); }}
+.comp-leg {{ display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; color: var(--suave);
+             font-size: .85rem; margin-top: .5rem; }}
+.comp-leg i {{ display: inline-block; width: .7rem; height: .7rem; border-radius: 3px; margin-right: .4rem;
+               vertical-align: -1px; }}
+.frase {{ color: var(--suave); font-size: 1.04rem; line-height: 1.55; margin: 1.1rem 0 0; max-width: 36rem; }}
+.frase b {{ color: var(--texto); }}
+
+/* ruas animadas */
+.ilustra {{ display: grid; gap: .55rem; padding: 1.2rem 1.25rem 1rem; border-radius: 24px;
+            background: rgba(3,5,12,.6); border: 1px solid rgba(255,255,255,.09);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.06); animation: subir .9s var(--curva) both .35s; }}
+.pista-rot {{ display: flex; justify-content: space-between; font-size: .74rem; font-weight: 800;
+              letter-spacing: .15em; text-transform: uppercase; margin-top: .35rem; }}
+.pista-rot span {{ color: var(--apagado); letter-spacing: .08em; }}
+.pista {{ position: relative; height: 46px; border-radius: 12px; overflow: hidden;
+          background: linear-gradient(180deg, #0D1226, #080B18); border: 1px solid rgba(255,255,255,.06); }}
+.pista::before {{ content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px;
+                  background: repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 16px, transparent 16px 32px); }}
+.pista::after {{ content: ""; position: absolute; left: 62%; top: 0; bottom: 0; width: 3px; z-index: 0;
+                 background: var(--ambar); box-shadow: 0 0 14px var(--ambar); }}
+.trilho {{ position: absolute; inset: 0 auto 0 0; width: 200%; z-index: 1; animation: andar 15s linear infinite; }}
+.bus {{ position: absolute; top: 50%; width: 38px; height: 19px; margin: -11px 0 0 -19px; border-radius: 5px 9px 9px 5px;
+        background: var(--b); box-shadow: 0 0 16px color-mix(in srgb, var(--b) 65%, transparent); }}
+.bus::before {{ content: ""; position: absolute; left: 4px; right: 8px; top: 4px; height: 6px; border-radius: 2px;
+                background: repeating-linear-gradient(90deg, rgba(5,7,16,.72) 0 6px, transparent 6px 8px); }}
+.bus::after {{ content: ""; position: absolute; left: 6px; bottom: -3px; width: 7px; height: 7px; border-radius: 50%;
+               background: #C9D0EE; box-shadow: 19px 0 0 #C9D0EE; }}
+.ilustra-pe {{ color: var(--suave); font-size: .86rem; line-height: 1.45; margin-top: .45rem; }}
+.ilustra-pe i {{ display: inline-block; width: 3px; height: .9rem; background: var(--ambar); margin-right: .45rem;
+                 vertical-align: -2px; box-shadow: 0 0 8px var(--ambar); }}
+.tiles {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-top: .9rem;
+          animation: subir .9s var(--curva) both .55s; }}
+.tile {{ border-radius: 18px; padding: .8rem .95rem .75rem; border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
+         background: linear-gradient(160deg, color-mix(in srgb, var(--c) 24%, transparent), rgba(4,6,14,.6) 72%); }}
+.tile .r {{ color: var(--suave); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }}
+.tile .v {{ color: var(--c); font-size: 2.3rem; font-weight: 900; font-stretch: 62%; line-height: 1.05;
+            font-variant-numeric: tabular-nums; }}
+.tile .v small {{ font-size: .5em; font-stretch: 85%; margin-left: .12em; }}
+.hero-pe {{ margin-top: 1.7rem; padding-top: .9rem; border-top: 1px solid rgba(255,255,255,.08);
+            color: var(--apagado); font-size: .86rem; }}
+
+/* letreiro rolante */
+.rolante {{ display: flex; align-items: stretch; margin: 1.4rem 0 .2rem; background: #030409; overflow: hidden;
+            border: 1px solid #2A2410; border-radius: 16px;
+            box-shadow: inset 0 0 0 4px #0A0B12, 0 0 60px -14px rgba(255,181,71,.35); }}
+.rolante .fixo {{ flex: none; display: flex; align-items: center; padding: .7rem 1.1rem; background: var(--ambar);
+                  color: #030409; font-family: 'Doto', monospace; font-weight: 900; font-size: 1.1rem;
+                  letter-spacing: .03em; text-transform: uppercase; }}
+.rolante .janela {{ flex: 1; overflow: hidden;
+                    -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+                    mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }}
+.rolante .vai {{ display: flex; width: max-content; animation: rolar 70s linear infinite; }}
+.rolante .vai span {{ font-family: 'Doto', monospace; font-weight: 800; font-size: 1.45rem; color: var(--ambar);
+                      white-space: nowrap; padding: .65rem 1.3rem; text-transform: uppercase;
+                      text-shadow: 0 0 8px rgba(255,181,71,.6); }}
+.rolante .vai span em {{ font-style: normal; color: var(--apagado); text-shadow: none; }}
+.rolante .vai span b {{ color: #FF8099; text-shadow: 0 0 9px rgba(255,90,121,.75); }}
+.rolante:hover .vai {{ animation-play-state: paused; }}
+
+/* paineis: cada um com a sua cor */
+[class*="st-key-sec_"] {{ --acc: var(--ciano); position: relative; border-radius: 26px; margin-top: 1.4rem;
+    padding: 1.6rem 1.8rem 1.3rem; border: 1px solid color-mix(in srgb, var(--acc) 24%, transparent);
+    background: linear-gradient(165deg, color-mix(in srgb, var(--acc) 10%, rgba(16,22,52,.9)), rgba(7,10,24,.92) 55%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acc) 55%, transparent),
+                0 40px 80px -55px color-mix(in srgb, var(--acc) 80%, transparent);
+    animation: subir .8s var(--curva) both; }}
+.st-key-sec_faixa {{ --acc: var(--ciano); animation-delay: .5s; }}
+.st-key-sec_tendencia {{ --acc: var(--coral); animation-delay: .6s; }}
+.st-key-sec_linhas {{ --acc: var(--ambar); }}
+.st-key-sec_mapa {{ --acc: var(--violeta); }}
+.st-key-sec_colados {{ --acc: var(--coral); }}
+.st-key-sec_ml {{ --acc: var(--menta); }}
+.secao {{ display: flex; align-items: center; gap: 1.2rem; margin-bottom: .8rem; }}
+.secao .num {{ flex: none; font-size: 5.4rem; font-weight: 900; font-stretch: 62%; line-height: .8;
+               letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 2px var(--acc);
+               filter: drop-shadow(0 0 16px color-mix(in srgb, var(--acc) 50%, transparent)); }}
+.secao .olho {{ color: var(--acc); font-size: .78rem; font-weight: 800; letter-spacing: .2em; }}
+.secao .titulo {{ color: var(--texto); font-size: 2.1rem; font-weight: 900; font-stretch: 78%; line-height: 1.08;
+                  letter-spacing: -.01em; margin-top: .1rem; }}
+.secao .nota {{ color: var(--suave); font-size: .95rem; margin-top: .35rem; }}
+.nota {{ color: var(--suave); font-size: .95rem; margin: .2rem 0 .8rem; }}
+
+/* ranking de linhas */
+.rank {{ display: grid; gap: .5rem; margin: .4rem 0 .9rem; }}
+.rank .item {{ display: grid; grid-template-columns: 2rem 5rem minmax(0, 1fr) 5.6rem; gap: .8rem; align-items: center; }}
+.rank .pos {{ color: var(--apagado); font-size: 1.5rem; font-weight: 900; font-stretch: 62%; text-align: right; }}
+.rank .lin {{ font-family: 'Doto', monospace; font-weight: 900; font-size: 1.15rem; color: var(--ambar);
+              background: #030409; border: 1px solid #2A2410; border-radius: 9px; text-align: center;
+              padding: .3rem .2rem; text-shadow: 0 0 7px rgba(255,181,71,.6); }}
+.rank .barra {{ position: relative; height: 2.4rem; border-radius: 11px; overflow: hidden;
+                background: rgba(255,255,255,.045); }}
+.rank .barra i {{ position: absolute; inset: 0 auto 0 0; width: var(--w); border-radius: 11px; transform-origin: left;
+                  background: linear-gradient(90deg, rgba(255,90,121,.28), var(--coral));
+                  box-shadow: 0 0 22px -4px rgba(255,90,121,.6);
+                  animation: crescer 1s var(--curva) both; animation-delay: calc(var(--i) * 70ms); }}
+.rank .barra span {{ position: relative; display: block; padding: 0 .85rem; line-height: 2.4rem; color: var(--texto);
+                     font-size: .92rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.rank .val {{ text-align: right; color: var(--texto); font-size: 1.5rem; font-weight: 900; font-stretch: 68%;
+              line-height: 1; font-variant-numeric: tabular-nums; }}
+.rank .val small {{ display: block; color: #FF8099; font-size: .78rem; font-weight: 700; font-stretch: 100%;
+                    margin-top: .2rem; }}
+
+/* legenda do mapa */
+.legenda {{ display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; color: var(--suave);
+            font-size: .88rem; margin: .7rem 0 .4rem; font-variant-numeric: tabular-nums; }}
+.legenda i {{ width: 180px; height: 10px; border-radius: 99px;
+              background: linear-gradient(90deg, {CIANO}, {DOURADO}, {CORAL}); }}
+.legenda em {{ font-style: normal; color: var(--apagado); }}
+
+/* cards */
+.cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .9rem; margin: .3rem 0 .8rem; }}
+.card {{ border-radius: 20px; padding: 1.05rem 1.2rem 1rem; border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
+         background: linear-gradient(160deg, color-mix(in srgb, var(--c) 22%, transparent), rgba(4,6,14,.55) 68%);
+         box-shadow: 0 24px 50px -40px var(--c); }}
+.card .rotulo {{ color: var(--suave); font-size: .76rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }}
+.card .valor {{ color: var(--c); font-size: 3.4rem; font-weight: 900; line-height: 1.02; font-stretch: 62%;
+                font-variant-numeric: tabular-nums; margin: .25rem 0 .2rem; }}
+.card .valor small {{ font-size: .45em; font-weight: 800; font-stretch: 85%; margin-left: .12em; }}
+.card .sub {{ color: var(--suave); font-size: .88rem; line-height: 1.35; }}
+[data-testid="stCaptionContainer"] p {{ color: var(--apagado); }}
+[data-testid="stExpander"] details {{ background: rgba(15,23,51,.55); border-radius: 16px; }}
+.rodape {{ color: var(--apagado); font-size: .88rem; margin-top: 2rem; padding-top: 1rem;
+           border-top: 1px dashed var(--borda); }}
+.rodape a {{ color: var(--ciano); }}
+
+@media (max-width: 900px) {{
+  .hero-grade {{ grid-template-columns: minmax(0, 1fr); gap: 1.8rem; }}
+}}
+@media (max-width: 640px) {{
+  .block-container {{ padding-top: 1.6rem; }}
+  .letreiro .destino {{ font-size: 1.45rem; }} .letreiro .placa {{ font-size: 1.4rem; }}
+  div:has(> .st-key-filtros) {{ position: static; padding-top: 0; margin-top: 0; background: none; }}
+  .hero {{ padding: 1.6rem 1.1rem 1.1rem; border-radius: 24px; }}
+  .big-sub {{ font-size: 1.3rem; }}
+  .trilha {{ height: 2.8rem; font-size: 1.1rem; }}
+  .ilustra {{ padding: 1rem .9rem .9rem; }}
+  .bus {{ width: 26px; height: 14px; margin: -8px 0 0 -13px; }}
+  .bus::before {{ left: 3px; right: 6px; top: 3px; height: 4px; }}
+  .bus::after {{ left: 4px; width: 5px; height: 5px; box-shadow: 13px 0 0 #C9D0EE; }}
+  .tile .v {{ font-size: 1.85rem; }} .tile {{ padding: .7rem .7rem .65rem; }}
+  .rolante .fixo {{ font-size: .85rem; padding: .6rem .7rem; }} .rolante .vai span {{ font-size: 1.15rem; }}
+  [class*="st-key-sec_"] {{ padding: 1.2rem .95rem 1rem; border-radius: 20px; }}
+  .secao {{ gap: .8rem; }} .secao .num {{ font-size: 3.6rem; }} .secao .titulo {{ font-size: 1.5rem; }}
+  .rank .item {{ grid-template-columns: 1.3rem 3.9rem minmax(0, 1fr) 4.4rem; gap: .5rem; }}
+  .rank .lin {{ font-size: .95rem; }} .rank .barra span {{ font-size: .8rem; padding: 0 .5rem; }}
+  .card .valor {{ font-size: 2.8rem; }}
+}}
+@media (prefers-reduced-motion: reduce) {{ *, *::before, *::after {{ animation: none !important; }} }}
 </style>
 """
 
 
 def card(rotulo: str, valor: str, sub: str, cor: str) -> str:
-    return (f'<div class="card"><div class="rotulo">{rotulo}</div>'
-            f'<div class="valor" style="color:{cor}">{valor}</div><div class="sub">{sub}</div></div>')
+    num, _, unidade = valor.partition(" ")
+    valor = f"{num}<small>{unidade}</small>" if unidade else num
+    return (f'<div class="card" style="--c:{cor}"><div class="rotulo">{rotulo}</div>'
+            f'<div class="valor">{valor}</div><div class="sub">{sub}</div></div>')
 
 
 def cards(itens):
-    for col, item in zip(st.columns(len(itens)), itens):
-        col.markdown(card(*item), unsafe_allow_html=True)
+    st.markdown('<div class="cards">' + "".join(card(*i) for i in itens) + "</div>", unsafe_allow_html=True)
+
+
+def tile(rotulo: str, valor: str, cor: str) -> str:
+    num, _, unidade = valor.partition(" ")
+    valor = f"{num}<small>{unidade}</small>" if unidade else num
+    return f'<div class="tile" style="--c:{cor}"><div class="r">{rotulo}</div><div class="v">{valor}</div></div>'
+
+
+def compacto(n: float) -> str:
+    if n >= 1e6:
+        return f"{br(n / 1e6)} mi"
+    if n >= 1e3:
+        return f"{br(n / 1e3, 0)} mil"
+    return br(n, 0)
 
 
 def titulo(olho: str, texto: str, nota: str = ""):
-    st.markdown(f'<div class="olho">{olho}</div><div class="titulo">{texto}</div>'
-                + (f'<div class="nota">{nota}</div>' if nota else ""), unsafe_allow_html=True)
+    num, _, nome = olho.partition(" · ")
+    st.markdown(f'<div class="secao"><div class="num">{num}</div><div><div class="olho">{nome}</div>'
+                f'<div class="titulo">{texto}</div>' + (f'<div class="nota">{nota}</div>' if nota else "")
+                + "</div></div>", unsafe_allow_html=True)
+
+
+# Os mesmos 7 onibus, na mesma velocidade: em grupos (hoje) e espacados (regulares).
+# Posicoes em % da rua; a faixa anda uma rua inteira por volta e repete sem emenda.
+EM_GRUPOS = [0, 9, 18, 27, 55, 64, 73]
+IGUAIS = [100 / 7 * i for i in range(7)]
+
+
+def _pista(posicoes: list, cor: str, rotulo: str, detalhe: str) -> str:
+    onibus = "".join(f'<i class="bus" style="left:{x:.2f}%;--b:{cor}"></i>'
+                     for p in posicoes for x in (p / 2, 50 + p / 2))
+    return (f'<div class="pista-rot" style="color:{cor}">{rotulo}<span>{detalhe}</span></div>'
+            f'<div class="pista"><div class="trilho">{onibus}</div></div>')
+
+
+def ilustracao() -> str:
+    return ('<div class="ilustra" role="img" aria-label="Animação: os mesmos sete ônibus passando em grupos, '
+            'como hoje, e espaçados por igual">'
+            + _pista(EM_GRUPOS, CORAL, "Hoje: em grupos", "7 ônibus")
+            + _pista(IGUAIS, CIANO, "Intervalos iguais", "7 ônibus")
+            + '<div class="ilustra-pe"><i></i>o ponto. Mesmos ônibus, mesma velocidade. Em grupos, abre-se um buraco '
+              'longo, e quem chega nele espera mais.</div></div>')
 
 
 def estilo(fig: go.Figure, altura: int = 380) -> go.Figure:
     fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                      font=dict(family="Inter, Segoe UI, sans-serif", color=SUAVE, size=14), separators=",.",
-                      margin=dict(l=10, r=10, t=40, b=10), height=altura, hoverlabel=dict(font_size=14),
-                      legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, font=dict(color=TEXTO)))
-    fig.update_xaxes(gridcolor=GRADE, zeroline=False)
+                      font=dict(family="Archivo, Segoe UI, sans-serif", color=SUAVE, size=14), separators=",.",
+                      margin=dict(l=8, r=8, t=44, b=8), height=altura,
+                      hoverlabel=dict(font_size=14, font_family="Archivo, sans-serif", bgcolor="#0F1733",
+                                      bordercolor=BORDA_FORTE),
+                      legend=dict(orientation="h", yanchor="bottom", y=1.03, x=0, font=dict(color=TEXTO)))
+    fig.update_xaxes(gridcolor=GRADE, zeroline=False, linecolor=GRADE)
     fig.update_yaxes(gridcolor=GRADE, zeroline=False)
     return fig
 
@@ -214,6 +492,7 @@ def intervalo(periodo: str, ultimo: date) -> tuple[date, date]:
 # ---------- quadros ----------
 
 def q_manchete(f, nomes):
+    """Hero: o numero da espera extra, gigante, com a barra de comparacao e as ruas animadas."""
     onde, params = f["onde"], f["params"]
     rede = dados(sql_metricas([], onde), params)
     if rede.empty or pd.isna(rede.iloc[0]["headways"]):
@@ -221,22 +500,52 @@ def q_manchete(f, nomes):
         return
     r = rede.iloc[0]
     reg, ext = r["regular_min"], r["excesso_min"]
+    tot = reg + ext
     quem = ("nas linhas escolhidas" if f["linhas"] else
             {"alta": "numa linha de alta frequência", "baixa": "numa linha de baixa frequência",
              "todas": "numa linha qualquer"}[f["freq"]])
+    linhas = (f"{len(f['linhas'])} linha{'s' if len(f['linhas']) > 1 else ''} escolhida"
+              f"{'s' if len(f['linhas']) > 1 else ''}" if f["linhas"] else
+              {"alta": "alta frequência", "baixa": "baixa frequência", "todas": "todas as linhas"}[f["freq"]])
+    recorte = " · ".join([data_br(f["de"])[:5] + " a " + data_br(f["ate"])[:5],
+                          "todos os dias" if f["dia"] == "todos" else TIPOS_DIA[f["dia"]].lower(), linhas])
     st.markdown(
-        f'<div class="manchete">{TIPOS_DIA_FRASE[f["dia"]].capitalize()}, quem chega ao ponto {quem} espera em média '
-        f'<b>{br(reg + ext)} minutos</b> pelo ônibus. Com os mesmos ônibus passando em intervalos iguais, seriam '
-        f'{br(reg)} minutos. A diferença, <b>{br(ext)} minutos (+{br(100 * ext / reg, 0)}%)</b>, '
-        f'é o custo da irregularidade.</div>', unsafe_allow_html=True)
-    cards([
-        ("Espera média no ponto", f"{br(reg + ext)} min", "o que o passageiro espera hoje", TEXTO),
-        ("Com ônibus regulares", f"{br(reg)} min", "metade do intervalo médio", CIANO),
-        ("Espera extra", f"{br(ext)} min", f"+{br(100 * ext / reg, 0)}% pela irregularidade", CORAL),
-        ("Ônibus colados", pct(r["colados_pct"]), "intervalo abaixo de 1/4 do médio", DOURADO),
-    ])
-    st.caption(f"{br(r['headways'], 0)} intervalos medidos em {br(r['horas'], 0)} horas de serviço, "
-               f"de {data_br(f['de'])} a {data_br(f['ate'])}. Média ponderada pelo tempo de serviço coberto.")
+        '<section class="hero"><div class="hero-grade"><div>'
+        f'<span class="kicker">{recorte}</span>'
+        f'<div class="big">+{br(ext)}<span class="un">min</span></div>'
+        '<div class="big-sub">de espera <em>a mais</em> em cada ida ao ponto, só porque os ônibus não passam '
+        'em intervalos iguais</div>'
+        f'<div class="comp"><div class="comp-topo"><span>Espera média no ponto</span><b>{br(tot)} min</b></div>'
+        f'<div class="trilha"><span class="reg" style="--w:{100 * reg / tot:.1f}%">{br(reg)}</span>'
+        f'<span class="ext">+{br(ext)}</span></div>'
+        f'<div class="comp-leg"><span><i style="background:{CIANO}"></i>com intervalos iguais</span>'
+        f'<span><i style="background:{CORAL}"></i>custo da irregularidade, +{br(100 * ext / reg, 0)}%</span></div></div>'
+        f'<p class="frase">{TIPOS_DIA_FRASE[f["dia"]].capitalize()}, quem chega ao ponto {quem} espera em média '
+        f'<b>{br(tot)} minutos</b> pelo ônibus. Com os mesmos ônibus em intervalos iguais, seriam '
+        f'<b>{br(reg)} minutos</b>.</p></div>'
+        '<div>' + ilustracao() + '<div class="tiles">'
+        + tile("Colados", pct(r["colados_pct"]), DOURADO)
+        + tile("Intervalos", compacto(r["headways"]), VIOLETA)
+        + tile("Horas medidas", compacto(r["horas"]), MENTA)
+        + '</div></div></div>'
+        f'<div class="hero-pe">{br(r["headways"], 0)} intervalos medidos em {br(r["horas"], 0)} horas de serviço, '
+        f'de {data_br(f["de"])} a {data_br(f["ate"])}. Média ponderada pelo tempo de serviço coberto. '
+        'Colado: intervalo menor que 1/4 do intervalo médio.</div></section>',
+        unsafe_allow_html=True)
+
+
+def q_rolante(f, nomes):
+    """Letreiro rolante com as linhas que mais somam espera extra (mesma consulta do quadro 04)."""
+    onde, params = filtro(f["de"], f["ate"], f["tipo_dia"], f["alta"])
+    df = dados(sql_metricas(["route_id"], onde), params)
+    if df.empty:
+        return
+    df = df.sort_values("volume_min_h", ascending=False).head(12)
+    itens = "".join(f'<span><em>{i}º</em> {rid} <b>+{br(e)} min</b></span>'
+                    for i, (rid, e) in enumerate(zip(df["route_id"], df["excesso_min"]), 1))
+    st.markdown(f'<div class="rolante" title="As 12 linhas que mais somam espera extra no recorte, com a espera '
+                f'extra por passageiro de cada uma"><div class="fixo">Mais espera</div><div class="janela">'
+                f'<div class="vai">{itens}{itens}</div></div></div>', unsafe_allow_html=True)
 
 
 def q_faixa(f):
@@ -253,9 +562,11 @@ def q_faixa(f):
     fig.add_bar(x=x, y=df["excesso_min"], name="Espera extra", marker_color=CORAL,
                 text=[f"+{br(v, 1)}" for v in df["excesso_min"]], textposition="outside",
                 textfont=dict(color=TEXTO, size=14), hovertemplate="%{y:.2f} min<extra>extra</extra>")
-    fig.update_layout(barmode="stack", bargap=.35)
+    fig.update_layout(barmode="stack", bargap=.32)
+    fig.update_traces(marker_cornerradius=6, selector=dict(type="bar"))
     fig.update_yaxes(title=None, rangemode="tozero")
-    grafico(estilo(fig))
+    fig.update_xaxes(tickangle=0, tickfont=dict(size=12))
+    grafico(estilo(fig, 400))
 
 
 def q_tendencia(f):
@@ -267,12 +578,15 @@ def q_tendencia(f):
     fig = go.Figure()
     fig.add_scatter(x=df["data_bh"], y=df["regular_min"], name="Com ônibus regulares", mode="lines+markers",
                     line=dict(color=CIANO, width=2), marker=dict(size=6), hovertemplate="%{y:.2f} min<extra></extra>")
+    fig.add_scatter(x=df["data_bh"], y=df["excesso_min"], mode="lines", line=dict(color="rgba(255,90,121,.22)",
+                    width=12), hoverinfo="skip", showlegend=False)  # brilho por baixo da linha
     fig.add_scatter(x=df["data_bh"], y=df["excesso_min"], name="Espera extra", mode="lines+markers",
-                    line=dict(color=CORAL, width=3), marker=dict(size=7), hovertemplate="%{y:.2f} min<extra></extra>")
+                    line=dict(color=CORAL, width=3), marker=dict(size=7), fill="tozeroy",
+                    fillcolor="rgba(255,90,121,.14)", hovertemplate="%{y:.2f} min<extra></extra>")
     fig.update_xaxes(tickformat="%d/%m", hoverformat="%a %d/%m")
     fig.update_yaxes(rangemode="tozero")
     fig.update_layout(hovermode="x unified")
-    grafico(estilo(fig, 340))
+    grafico(estilo(fig, 400))
 
 
 def q_linhas(f, nomes):
@@ -298,6 +612,17 @@ def q_linhas(f, nomes):
                   f"com {pct(top['horas'].sum() / df['horas'].sum())} das horas de serviço")
         df = top
     st.caption(rotulo)
+    barras = df.head(10 if not f["linhas"] else 15)
+    maior = barras["parte"].max() or 1
+    st.markdown('<div class="rank">' + "".join(
+        f'<div class="item"><div class="pos">{p}</div><div class="lin">{rid}</div>'
+        f'<div class="barra"><i style="--w:{100 * v / maior:.1f}%;--i:{k}"></i>'
+        f'<span>{nomes.get(rid, "")}</span></div>'
+        f'<div class="val">{pct(v)}<small>+{br(e)} min</small></div></div>'
+        for k, (p, rid, v, e) in enumerate(zip(barras["posicao"], barras["route_id"], barras["parte"],
+                                               barras["excesso_min"])))
+        + '</div>', unsafe_allow_html=True)
+    st.caption("Barra: parte da espera extra da rede. Abaixo dela, a espera extra por passageiro na linha.")
     tabela = pd.DataFrame({
         "Posição": df["posicao"], "Linha": df["route_id"], "Nome": df["route_id"].map(nomes).fillna(""),
         "Regular (min)": df["regular_min"], "Extra (min)": df["excesso_min"], "% da espera extra": df["parte"],
@@ -306,8 +631,9 @@ def q_linhas(f, nomes):
     fmt = {"Regular (min)": lambda v: br(v, 2), "Extra (min)": lambda v: br(v, 2),
            "% da espera extra": lambda v: pct(v), "Colados": lambda v: pct(v),
            "Corte sem colagem": lambda v: pct(v), "Horas de serviço": lambda v: br(v, 0)}
-    st.dataframe(tabela.style.format(fmt), hide_index=True, width="stretch",
-                 height=min(35 * (len(tabela) + 1) + 3, 780))
+    with st.expander(f"Tabela com todas as colunas ({len(tabela)} linhas)"):
+        st.dataframe(tabela.style.format(fmt), hide_index=True, width="stretch",
+                     height=min(35 * (len(tabela) + 1) + 3, 780))
     st.caption("Corte sem colagem: quanto da espera extra da linha some se o ônibus atrasado, que puxou o de trás "
                "para colado, passasse no meio do caminho entre os dois. É o tamanho do problema dos colados, "
                "não o ganho garantido de uma técnica.")
@@ -347,8 +673,10 @@ def q_mapa(f):
     vista = pdk.ViewState(latitude=-19.88, longitude=-43.96, zoom=11)
     st.pydeck_chart(pdk.Deck(layers=[camada], initial_view_state=vista, map_style="dark",
                              tooltip={"text": "{txt}"}), height=560)
-    st.caption(f"{br(len(df), 0)} pontos, {janela}. Cor: espera extra por passageiro, do ciano (menor) ao coral (maior). "
-               "Tamanho: horas de serviço.")
+    lo, hi = df["excesso_min"].quantile(.05), df["excesso_min"].quantile(.95)
+    st.markdown(f'<div class="legenda"><span>{br(lo, 1)} min</span><i></i><span>{br(hi, 1)} min</span>'
+                f'<em>espera extra por passageiro · tamanho: horas de serviço · {br(len(df), 0)} pontos, {janela}</em>'
+                '</div>', unsafe_allow_html=True)
     df["volume"] = df["volume_min_h"]
     top = df.sort_values("volume", ascending=False).head(10)
     st.markdown(f'<div class="nota">Os 10 pontos que mais somam espera extra respondem por '
@@ -384,7 +712,7 @@ def q_colados(f):
     h["parte"] = h["headways"] / h["headways"].sum()
     x = [min(c, 80) * .05 + .025 for c in h["classe"]]
     cor = [CORAL if c < 5 else CIANO for c in h["classe"]]
-    fig = go.Figure(go.Bar(x=x, y=h["parte"] * 100, marker_color=cor, width=.045,
+    fig = go.Figure(go.Bar(x=x, y=h["parte"] * 100, marker_color=cor, width=.045, marker_cornerradius=3,
                            customdata=[("4 ou mais" if c >= 80 else f"{br(c * .05, 2)} a {br(c * .05 + .05, 2)}")
                                        for c in h["classe"]],
                            hovertemplate="intervalo de %{customdata} vezes o médio<br>%{y:.2f}% dos intervalos"
@@ -459,10 +787,13 @@ def main():
     except Exception:  # cabecalho segue com a data pelo relogio
         logging.exception("carga ou linhas falhou")
 
-    st.markdown(f'<div class="marca">Radar de <span>ônibus</span> BH</div><span class="selo">{selo}</span>',
+    st.markdown(f'<div class="topo"><div class="letreiro"><span class="placa">BH</span>'
+                f'<span class="destino">Radar de ônibus</span></div><div class="dir"><span class="selo">{selo}</span>'
+                f'<a class="git" href="{REPO}" target="_blank">Código e método ↗</a></div></div>',
                 unsafe_allow_html=True)
 
-    c1, c2, c3, c4 = st.columns([1.3, 1, 1, 2])
+    filtros = st.container(key="filtros")
+    c1, c2, c3, c4 = filtros.columns([1.3, 1, 1, 2])
     periodo = c1.selectbox("Período", list(PERIODOS), format_func=PERIODOS.get, key="periodo")
     dia = c2.selectbox("Tipo de dia", list(TIPOS_DIA), format_func=TIPOS_DIA.get, key="dia")
     freq = c3.selectbox("Frequência da linha", list(FREQS), format_func=FREQS.get, key="freq",
@@ -481,7 +812,7 @@ def main():
         if not d or d[0] > d[-1]:
             d = (max(INICIO, ultimo - timedelta(days=27)), ultimo)
         st.session_state.datas = d
-        escolha = st.date_input("Datas", key="datas", min_value=INICIO, max_value=ultimo, format="DD/MM/YYYY")
+        escolha = filtros.date_input("Datas", key="datas", min_value=INICIO, max_value=ultimo, format="DD/MM/YYYY")
         de, ate = (escolha[0], escolha[-1]) if isinstance(escolha, (tuple, list)) and escolha else (INICIO, ultimo)
     else:
         de, ate = intervalo(periodo, ultimo)
@@ -493,14 +824,19 @@ def main():
     f = dict(de=de, ate=ate, dia=dia, freq=freq, tipo_dia=tipo_dia, alta=alta, linhas=linhas,
              onde=onde, params=params)
 
-    titulo("01 · MANCHETE", "Quanto o passageiro espera a mais por ônibus irregular")
-    quadro(lambda: q_manchete(f, nomes))
-    quadro(lambda: q_faixa(f))
-    quadro(lambda: q_tendencia(f))
-    quadro(lambda: q_linhas(f, nomes))
-    quadro(lambda: q_mapa(f))
-    quadro(lambda: q_colados(f))
-    quadro(q_ml)
+    with st.container(key="hero"):
+        quadro(lambda: q_manchete(f, nomes))
+    quadro(lambda: q_rolante(f, nomes))
+    esq, dir_ = st.columns(2, gap="medium")
+    with esq:
+        painel("faixa", lambda: q_faixa(f))
+    with dir_:
+        painel("tendencia", lambda: q_tendencia(f))
+    painel("linhas", lambda: q_linhas(f, nomes))
+    painel("mapa", lambda: q_mapa(f))
+    painel("colados", lambda: q_colados(f))
+    painel("ml", q_ml)
+    st.write("")
 
     with st.expander("Qualidade dos dados, dia a dia"):
         quadro(q_qualidade)
@@ -514,8 +850,9 @@ def main():
             "este projeto a cada 30 segundos desde 14/09/2026. O banco do painel guarda somas reagregáveis por "
             "linha, sentido, dia e faixa, então qualquer filtro dá a mesma conta da análise. Na janela da análise "
             f"(15/09 a 05/11), os números deste painel batem com os da [análise]({REPO}/blob/main/docs/analise.md).")
-    st.caption(f"Código e método: [{REPO.removeprefix('https://')}]({REPO}). "
-               "Dados: GTFS e GTFS-Realtime da PBH. Projeto independente, sem vínculo com a Prefeitura.")
+    st.markdown(f'<div class="rodape">Código e método: <a href="{REPO}">{REPO.removeprefix("https://")}</a>. '
+                "Dados: GTFS e GTFS-Realtime da PBH. Projeto independente, sem vínculo com a Prefeitura.</div>",
+                unsafe_allow_html=True)
 
     if st.session_state.banco_fora:
         with aviso.container():

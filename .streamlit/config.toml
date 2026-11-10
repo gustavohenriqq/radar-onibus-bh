@@ -1,9 +1,14 @@
 [theme]
 base = "dark"
 primaryColor = "#22D3EE"
-backgroundColor = "#0A1024"
-secondaryBackgroundColor = "#0F1839"
+backgroundColor = "#070B1A"
+secondaryBackgroundColor = "#0F1733"
 textColor = "#F2F5FF"
+borderColor = "#1F2B57"
+baseRadius = "0.6rem"
+font = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"
+headingFont = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"
+dataframeHeaderBackgroundColor = "#141E42"
 
 [server]
 headless = true
