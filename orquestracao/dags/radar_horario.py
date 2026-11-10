@@ -6,7 +6,8 @@ bucket (o backup envia a hora fechada ha 2 h, no minuto 45). Depois:
 1. traz o conteiner de H para o disco da VM, conferido por SHA-256;
 2. MERGE de H na Silver;
 3. Gold de ontem e hoje (dias de BH), regravando so essas particoes;
-4. na ultima hora do dia de BH, OPTIMIZE da Silver daquele dia;
+4. na ultima hora do dia de BH, OPTIMIZE da Silver daquele dia e exportacao dos
+   agregados para o banco do painel (servico/exportar.py, Neon);
 5. na ultima hora do domingo, VACUUM da Silver e da Gold.
 
 Tudo e idempotente: rodar a mesma hora de novo nao muda nenhuma tabela. O coletor
@@ -85,6 +86,13 @@ with DAG(
         pool=POOL_SPARK,
     )
 
+    # Le a NEON_URL do .env montado em /app, para a senha nao passar pelo Airflow.
+    exportar = no_conteiner(
+        "exportar_servico",
+        "python -m servico.exportar --ate {{ data_bh(data_interval_start) }}",
+        pool=POOL_SPARK,
+    )
+
     fim_da_semana = ShortCircuitOperator(
         task_id="fim_da_semana_bh",
         python_callable=lambda data_interval_start, **_: fecha_semana_bh(data_interval_start),
@@ -97,4 +105,5 @@ with DAG(
     )
 
     aguardar >> sincronizar >> silver >> gold >> [avisar, fim_do_dia]
-    fim_do_dia >> optimize >> fim_da_semana >> vacuum_silver >> vacuum_gold
+    fim_do_dia >> optimize >> [exportar, fim_da_semana]
+    fim_da_semana >> vacuum_silver >> vacuum_gold

@@ -4,3 +4,5 @@ pyspark==4.2.0
 delta-spark==4.4.1
 tzdata
 pytest==8.4.2
+# Escrita no Postgres do painel (servico/exportar.py); tem wheel aarch64
+psycopg[binary]==3.2.10
