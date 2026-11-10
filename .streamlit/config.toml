@@ -1,9 +1,9 @@
 [theme]
 base = "dark"
-primaryColor = "#22D3EE"
+primaryColor = "#6FC1D3"
 backgroundColor = "#070B1A"
 secondaryBackgroundColor = "#0F1733"
-textColor = "#F2F5FF"
+textColor = "#E4E8F2"
 borderColor = "#1F2B57"
 baseRadius = "0.6rem"
 font = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"

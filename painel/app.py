@@ -39,8 +39,8 @@ HORAS_MIN_PARADA = 25  # na janela de 28 dias (a analise usou 50 h em 52 dias)
 
 # Paleta noturna: ambar do letreiro, coral da espera extra, ciano do regular.
 FUNDO, PAINEL, BORDA, BORDA_FORTE = "#060812", "#0E1430", "rgba(148,163,255,.14)", "rgba(148,163,255,.32)"
-TEXTO, SUAVE, APAGADO, GRADE = "#F2F5FF", "#B8C2E6", "#8E99C6", "rgba(148,163,255,.12)"
-CIANO, VIOLETA, MENTA, CORAL, DOURADO = "#22D3EE", "#A78BFA", "#34D399", "#FF5A79", "#FFB547"
+TEXTO, SUAVE, APAGADO, GRADE = "#E4E8F2", "#AEB6D2", "#8890B4", "rgba(148,163,255,.10)"
+CIANO, VIOLETA, MENTA, CORAL, DOURADO = "#6FC1D3", "#A49AD6", "#72C3A2", "#E2828F", "#DDB06C"
 
 TIPOS_DIA = {"dia_util": "Dia útil", "sabado": "Sábado", "domingo_feriado": "Domingo e feriado", "todos": "Todos"}
 TIPOS_DIA_FRASE = {"dia_util": "em dia útil", "sabado": "no sábado", "domingo_feriado": "no domingo e feriado",
@@ -130,10 +130,10 @@ CSS = f"""
          --apagado: {APAGADO}; --ambar: {DOURADO}; --ciano: {CIANO}; --coral: {CORAL}; --violeta: {VIOLETA};
          --menta: {MENTA}; --curva: cubic-bezier(.2,.8,.2,1); }}
 .stApp {{ background:
-    radial-gradient(900px 620px at 104% -8%, rgba(255,90,121,.20), transparent 60%),
-    radial-gradient(1000px 640px at -8% 0%, rgba(34,211,238,.15), transparent 60%),
-    radial-gradient(1000px 700px at 50% 115%, rgba(167,139,250,.13), transparent 60%),
-    radial-gradient(rgba(170,180,255,.075) 1px, transparent 1.3px) 0 0 / 24px 24px,
+    radial-gradient(900px 620px at 104% -8%, rgba(226,130,143,.06), transparent 60%),
+    radial-gradient(1000px 640px at -8% 0%, rgba(111,193,211,.05), transparent 60%),
+    radial-gradient(1000px 700px at 50% 115%, rgba(164,154,214,.04), transparent 60%),
+    radial-gradient(rgba(170,180,255,.035) 1px, transparent 1.3px) 0 0 / 24px 24px,
     var(--fundo); }}
 .block-container {{ padding-top: 2.4rem; padding-bottom: 4rem; max-width: 1380px; }}
 header[data-testid="stHeader"] {{ background: transparent; }}
@@ -143,10 +143,6 @@ header[data-testid="stHeader"] {{ background: transparent; }}
 @keyframes surgir {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
 @keyframes andar {{ from {{ transform: translateX(-50%); }} to {{ transform: translateX(0); }} }}
 @keyframes rolar {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
-@keyframes girar {{ to {{ transform: rotate(360deg); }} }}
-@keyframes pulsar {{ 0%, 100% {{ box-shadow: 0 0 0 0 rgba(52,211,153,.55); }}
-                     70% {{ box-shadow: 0 0 0 9px rgba(52,211,153,0); }} }}
-@keyframes piscar {{ 0%, 92%, 100% {{ opacity: 1; }} 95% {{ opacity: .55; }} }}
 
 /* topo: letreiro de LED */
 .topo {{ display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .9rem 1.4rem;
@@ -154,19 +150,15 @@ header[data-testid="stHeader"] {{ background: transparent; }}
 .topo .dir {{ display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }}
 .letreiro {{ display: inline-flex; align-items: center; gap: .9rem; background: #030409;
              border: 1px solid #2A2410; border-radius: 14px; padding: .6rem 1.2rem .55rem .65rem;
-             box-shadow: inset 0 0 0 4px #0A0B12, 0 0 60px -6px rgba(255,181,71,.28); }}
+             box-shadow: inset 0 0 0 4px #0A0B12; }}
 .letreiro .placa {{ font-family: 'Doto', monospace; font-weight: 900; font-size: 2.2rem; line-height: 1;
-                    color: #030409; background: var(--ambar); border-radius: 8px; padding: .3rem .5rem .2rem;
-                    box-shadow: 0 0 18px rgba(255,181,71,.55); }}
+                    color: #030409; background: var(--ambar); border-radius: 8px; padding: .3rem .5rem .2rem; }}
 .letreiro .destino {{ font-family: 'Doto', monospace; font-weight: 800; font-size: 2.45rem; line-height: 1;
-                      color: var(--ambar); letter-spacing: .02em; text-transform: uppercase;
-                      text-shadow: 0 0 6px rgba(255,181,71,.65), 0 0 22px rgba(255,181,71,.3);
-                      animation: piscar 9s infinite; }}
+                      color: var(--ambar); letter-spacing: .02em; text-transform: uppercase; }}
 .selo {{ display: inline-flex; align-items: center; gap: .55rem; color: var(--suave); font-size: .9rem;
-         background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.3); border-radius: 99px;
+         background: rgba(114,195,162,.06); border: 1px solid rgba(114,195,162,.22); border-radius: 99px;
          padding: .35rem .85rem; }}
-.selo::before {{ content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--menta);
-                 animation: pulsar 2.2s infinite; }}
+.selo::before {{ content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--menta); }}
 .topo a.git {{ color: var(--texto); text-decoration: none; font-size: .9rem; font-weight: 600;
                border: 1px solid var(--borda); border-radius: 99px; padding: .35rem .9rem; }}
 .topo a.git:hover {{ border-color: var(--ciano); color: var(--ciano); }}
@@ -183,35 +175,33 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 /* hero: o numero da espera extra */
 .st-key-hero {{ margin-top: 1.3rem; }}
 .hero {{ position: relative; overflow: hidden; isolation: isolate; border-radius: 32px;
-         padding: 2.6rem 2.8rem 1.5rem; border: 1px solid rgba(255,255,255,.10);
-         background: linear-gradient(135deg, #1D0A27 0%, #0B1034 52%, #032230 100%);
-         box-shadow: 0 50px 120px -60px rgba(255,90,121,.7), inset 0 1px 0 rgba(255,255,255,.08);
+         padding: 2.6rem 2.8rem 1.5rem; border: 1px solid rgba(255,255,255,.08);
+         background: linear-gradient(135deg, #15131F 0%, #0E1228 52%, #0C1820 100%);
+         box-shadow: 0 30px 70px -50px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.05);
          animation: subir .8s var(--curva) both; }}
-.hero::before {{ content: ""; position: absolute; inset: -60%; z-index: -2; opacity: .8; filter: blur(70px);
+.hero::before {{ content: ""; position: absolute; inset: -60%; z-index: -2; opacity: .18; filter: blur(80px);
                  background: conic-gradient(from 0deg, transparent 0deg, rgba(255,90,121,.42) 60deg,
                    rgba(255,181,71,.16) 120deg, transparent 170deg, rgba(34,211,238,.36) 240deg,
-                   rgba(167,139,250,.24) 300deg, transparent 360deg);
-                 animation: girar 34s linear infinite; }}
+                   rgba(167,139,250,.24) 300deg, transparent 360deg); }}
 .hero::after {{ content: ""; position: absolute; inset: 0; z-index: -1;
-                background: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1.4px) 0 0 / 16px 16px;
+                background: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1.4px) 0 0 / 16px 16px;
                 -webkit-mask-image: linear-gradient(180deg, #000, transparent 75%);
                 mask-image: linear-gradient(180deg, #000, transparent 75%); }}
 .hero-grade {{ display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 2.6rem;
                align-items: center; }}
 .kicker {{ display: inline-flex; align-items: center; gap: .55rem; color: var(--ambar); font-size: .76rem;
-           font-weight: 800; letter-spacing: .16em; text-transform: uppercase; background: rgba(255,181,71,.10);
-           border: 1px solid rgba(255,181,71,.38); border-radius: 99px; padding: .38rem .85rem; }}
-.kicker::before {{ content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--ambar);
-                   box-shadow: 0 0 10px var(--ambar); }}
+           font-weight: 800; letter-spacing: .16em; text-transform: uppercase; background: rgba(221,176,108,.07);
+           border: 1px solid rgba(221,176,108,.26); border-radius: 99px; padding: .38rem .85rem; }}
+.kicker::before {{ content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--ambar); }}
 .big {{ display: flex; align-items: flex-start; margin: 1rem 0 .3rem; font-size: clamp(6.2rem, 13.5vw, 12.5rem);
         font-weight: 900; font-stretch: 62%; line-height: .8; letter-spacing: -.03em; color: transparent;
-        background: linear-gradient(180deg, #FFE3E9 0%, #FF8099 40%, #FF2D5A 100%);
+        background: linear-gradient(180deg, #F1DCE0 0%, #E5A3AE 45%, #CF7483 100%);
         -webkit-background-clip: text; background-clip: text;
-        filter: drop-shadow(0 0 34px rgba(255,45,90,.5)); animation: subir .9s var(--curva) both .15s; }}
+        animation: subir .9s var(--curva) both .15s; }}
 .big .un {{ font-size: .3em; font-stretch: 80%; letter-spacing: 0; margin: .3em 0 0 .12em; }}
 .big-sub {{ color: var(--texto); font-size: 1.6rem; font-weight: 800; font-stretch: 85%; line-height: 1.22;
             max-width: 31rem; animation: subir .9s var(--curva) both .3s; }}
-.big-sub em {{ font-style: normal; color: #FF8099; }}
+.big-sub em {{ font-style: normal; color: var(--coral); }}
 .comp {{ margin-top: 1.5rem; max-width: 36rem; animation: subir .9s var(--curva) both .45s; }}
 .comp-topo {{ display: flex; justify-content: space-between; align-items: baseline; color: var(--suave);
               font-size: .78rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
@@ -220,11 +210,11 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 .trilha {{ display: flex; height: 3.2rem; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.06);
            font-size: 1.25rem; font-weight: 900; font-stretch: 75%; }}
 .trilha .reg {{ width: var(--w); display: flex; align-items: center; padding: 0 1rem; color: #03141B;
-                background: linear-gradient(90deg, #0E7490, var(--ciano)); transform-origin: left;
+                background: linear-gradient(90deg, #4A8E9D, var(--ciano)); transform-origin: left;
                 animation: crescer 1.1s var(--curva) both .6s; white-space: nowrap; }}
 .trilha .ext {{ flex: 1; display: flex; align-items: center; justify-content: flex-end; padding: 0 1rem;
                 color: #2B0510; white-space: nowrap; animation: surgir .6s ease both 1.5s;
-                background: repeating-linear-gradient(135deg, #FF5A79 0 12px, #FF2D5A 12px 24px); }}
+                background: var(--coral); }}
 .comp-leg {{ display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; color: var(--suave);
              font-size: .85rem; margin-top: .5rem; }}
 .comp-leg i {{ display: inline-block; width: .7rem; height: .7rem; border-radius: 3px; margin-right: .4rem;
@@ -244,21 +234,21 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 .pista::before {{ content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px;
                   background: repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 16px, transparent 16px 32px); }}
 .pista::after {{ content: ""; position: absolute; left: 62%; top: 0; bottom: 0; width: 3px; z-index: 0;
-                 background: var(--ambar); box-shadow: 0 0 14px var(--ambar); }}
+                 background: var(--ambar); opacity: .8; }}
 .trilho {{ position: absolute; inset: 0 auto 0 0; width: 200%; z-index: 1; animation: andar 15s linear infinite; }}
 .bus {{ position: absolute; top: 50%; width: 38px; height: 19px; margin: -11px 0 0 -19px; border-radius: 5px 9px 9px 5px;
-        background: var(--b); box-shadow: 0 0 16px color-mix(in srgb, var(--b) 65%, transparent); }}
+        background: var(--b); }}
 .bus::before {{ content: ""; position: absolute; left: 4px; right: 8px; top: 4px; height: 6px; border-radius: 2px;
                 background: repeating-linear-gradient(90deg, rgba(5,7,16,.72) 0 6px, transparent 6px 8px); }}
 .bus::after {{ content: ""; position: absolute; left: 6px; bottom: -3px; width: 7px; height: 7px; border-radius: 50%;
                background: #C9D0EE; box-shadow: 19px 0 0 #C9D0EE; }}
 .ilustra-pe {{ color: var(--suave); font-size: .86rem; line-height: 1.45; margin-top: .45rem; }}
 .ilustra-pe i {{ display: inline-block; width: 3px; height: .9rem; background: var(--ambar); margin-right: .45rem;
-                 vertical-align: -2px; box-shadow: 0 0 8px var(--ambar); }}
+                 vertical-align: -2px; }}
 .tiles {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-top: .9rem;
           animation: subir .9s var(--curva) both .55s; }}
-.tile {{ border-radius: 18px; padding: .8rem .95rem .75rem; border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
-         background: linear-gradient(160deg, color-mix(in srgb, var(--c) 24%, transparent), rgba(4,6,14,.6) 72%); }}
+.tile {{ border-radius: 18px; padding: .8rem .95rem .75rem; border: 1px solid color-mix(in srgb, var(--c) 24%, transparent);
+         background: linear-gradient(160deg, color-mix(in srgb, var(--c) 9%, transparent), rgba(4,6,14,.6) 72%); }}
 .tile .r {{ color: var(--suave); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }}
 .tile .v {{ color: var(--c); font-size: 2.3rem; font-weight: 900; font-stretch: 62%; line-height: 1.05;
             font-variant-numeric: tabular-nums; }}
@@ -269,7 +259,7 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 /* letreiro rolante */
 .rolante {{ display: flex; align-items: stretch; margin: 1.4rem 0 .2rem; background: #030409; overflow: hidden;
             border: 1px solid #2A2410; border-radius: 16px;
-            box-shadow: inset 0 0 0 4px #0A0B12, 0 0 60px -14px rgba(255,181,71,.35); }}
+            box-shadow: inset 0 0 0 4px #0A0B12; }}
 .rolante .fixo {{ flex: none; display: flex; align-items: center; padding: .7rem 1.1rem; background: var(--ambar);
                   color: #030409; font-family: 'Doto', monospace; font-weight: 900; font-size: 1.1rem;
                   letter-spacing: .03em; text-transform: uppercase; }}
@@ -278,18 +268,16 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
                     mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }}
 .rolante .vai {{ display: flex; width: max-content; animation: rolar 70s linear infinite; }}
 .rolante .vai span {{ font-family: 'Doto', monospace; font-weight: 800; font-size: 1.45rem; color: var(--ambar);
-                      white-space: nowrap; padding: .65rem 1.3rem; text-transform: uppercase;
-                      text-shadow: 0 0 8px rgba(255,181,71,.6); }}
-.rolante .vai span em {{ font-style: normal; color: var(--apagado); text-shadow: none; }}
-.rolante .vai span b {{ color: #FF8099; text-shadow: 0 0 9px rgba(255,90,121,.75); }}
+                      white-space: nowrap; padding: .65rem 1.3rem; text-transform: uppercase; }}
+.rolante .vai span em {{ font-style: normal; color: var(--apagado); }}
+.rolante .vai span b {{ color: var(--coral); }}
 .rolante:hover .vai {{ animation-play-state: paused; }}
 
 /* paineis: cada um com a sua cor */
 [class*="st-key-sec_"] {{ --acc: var(--ciano); position: relative; border-radius: 26px; margin-top: 1.4rem;
-    padding: 1.6rem 1.8rem 1.3rem; border: 1px solid color-mix(in srgb, var(--acc) 24%, transparent);
-    background: linear-gradient(165deg, color-mix(in srgb, var(--acc) 10%, rgba(16,22,52,.9)), rgba(7,10,24,.92) 55%);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acc) 55%, transparent),
-                0 40px 80px -55px color-mix(in srgb, var(--acc) 80%, transparent);
+    padding: 1.6rem 1.8rem 1.3rem; border: 1px solid color-mix(in srgb, var(--acc) 15%, transparent);
+    background: linear-gradient(165deg, color-mix(in srgb, var(--acc) 5%, rgba(16,22,52,.9)), rgba(7,10,24,.92) 55%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acc) 28%, transparent), 0 30px 60px -45px rgba(0,0,0,.8);
     animation: subir .8s var(--curva) both; }}
 .st-key-sec_faixa {{ --acc: var(--ciano); animation-delay: .5s; }}
 .st-key-sec_tendencia {{ --acc: var(--coral); animation-delay: .6s; }}
@@ -299,8 +287,7 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 .st-key-sec_ml {{ --acc: var(--menta); }}
 .secao {{ display: flex; align-items: center; gap: 1.2rem; margin-bottom: .8rem; }}
 .secao .num {{ flex: none; font-size: 5.4rem; font-weight: 900; font-stretch: 62%; line-height: .8;
-               letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 2px var(--acc);
-               filter: drop-shadow(0 0 16px color-mix(in srgb, var(--acc) 50%, transparent)); }}
+               letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 1.5px var(--acc); opacity: .85; }}
 .secao .olho {{ color: var(--acc); font-size: .78rem; font-weight: 800; letter-spacing: .2em; }}
 .secao .titulo {{ color: var(--texto); font-size: 2.1rem; font-weight: 900; font-stretch: 78%; line-height: 1.08;
                   letter-spacing: -.01em; margin-top: .1rem; }}
@@ -313,18 +300,17 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 .rank .pos {{ color: var(--apagado); font-size: 1.5rem; font-weight: 900; font-stretch: 62%; text-align: right; }}
 .rank .lin {{ font-family: 'Doto', monospace; font-weight: 900; font-size: 1.15rem; color: var(--ambar);
               background: #030409; border: 1px solid #2A2410; border-radius: 9px; text-align: center;
-              padding: .3rem .2rem; text-shadow: 0 0 7px rgba(255,181,71,.6); }}
+              padding: .3rem .2rem; }}
 .rank .barra {{ position: relative; height: 2.4rem; border-radius: 11px; overflow: hidden;
                 background: rgba(255,255,255,.045); }}
 .rank .barra i {{ position: absolute; inset: 0 auto 0 0; width: var(--w); border-radius: 11px; transform-origin: left;
-                  background: linear-gradient(90deg, rgba(255,90,121,.28), var(--coral));
-                  box-shadow: 0 0 22px -4px rgba(255,90,121,.6);
+                  background: linear-gradient(90deg, color-mix(in srgb, var(--coral) 22%, transparent), color-mix(in srgb, var(--coral) 75%, transparent));
                   animation: crescer 1s var(--curva) both; animation-delay: calc(var(--i) * 70ms); }}
 .rank .barra span {{ position: relative; display: block; padding: 0 .85rem; line-height: 2.4rem; color: var(--texto);
                      font-size: .92rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
 .rank .val {{ text-align: right; color: var(--texto); font-size: 1.5rem; font-weight: 900; font-stretch: 68%;
               line-height: 1; font-variant-numeric: tabular-nums; }}
-.rank .val small {{ display: block; color: #FF8099; font-size: .78rem; font-weight: 700; font-stretch: 100%;
+.rank .val small {{ display: block; color: var(--coral); font-size: .78rem; font-weight: 700; font-stretch: 100%;
                     margin-top: .2rem; }}
 
 /* legenda do mapa */
@@ -336,9 +322,8 @@ div:has(> .st-key-filtros) {{ position: sticky; top: 1.3rem; z-index: 60; paddin
 
 /* cards */
 .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .9rem; margin: .3rem 0 .8rem; }}
-.card {{ border-radius: 20px; padding: 1.05rem 1.2rem 1rem; border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
-         background: linear-gradient(160deg, color-mix(in srgb, var(--c) 22%, transparent), rgba(4,6,14,.55) 68%);
-         box-shadow: 0 24px 50px -40px var(--c); }}
+.card {{ border-radius: 20px; padding: 1.05rem 1.2rem 1rem; border: 1px solid color-mix(in srgb, var(--c) 24%, transparent);
+         background: linear-gradient(160deg, color-mix(in srgb, var(--c) 9%, transparent), rgba(4,6,14,.55) 68%); }}
 .card .rotulo {{ color: var(--suave); font-size: .76rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }}
 .card .valor {{ color: var(--c); font-size: 3.4rem; font-weight: 900; line-height: 1.02; font-stretch: 62%;
                 font-variant-numeric: tabular-nums; margin: .25rem 0 .2rem; }}
@@ -578,11 +563,9 @@ def q_tendencia(f):
     fig = go.Figure()
     fig.add_scatter(x=df["data_bh"], y=df["regular_min"], name="Com ônibus regulares", mode="lines+markers",
                     line=dict(color=CIANO, width=2), marker=dict(size=6), hovertemplate="%{y:.2f} min<extra></extra>")
-    fig.add_scatter(x=df["data_bh"], y=df["excesso_min"], mode="lines", line=dict(color="rgba(255,90,121,.22)",
-                    width=12), hoverinfo="skip", showlegend=False)  # brilho por baixo da linha
     fig.add_scatter(x=df["data_bh"], y=df["excesso_min"], name="Espera extra", mode="lines+markers",
-                    line=dict(color=CORAL, width=3), marker=dict(size=7), fill="tozeroy",
-                    fillcolor="rgba(255,90,121,.14)", hovertemplate="%{y:.2f} min<extra></extra>")
+                    line=dict(color=CORAL, width=2.5), marker=dict(size=6), fill="tozeroy",
+                    fillcolor="rgba(226,130,143,.10)", hovertemplate="%{y:.2f} min<extra></extra>")
     fig.update_xaxes(tickformat="%d/%m", hoverformat="%a %d/%m")
     fig.update_yaxes(rangemode="tozero")
     fig.update_layout(hovermode="x unified")
