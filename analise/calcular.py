@@ -8,22 +8,8 @@ em SAIDA. Os graficos e o documento (docs/analise.md) saem desses CSVs.
 
 --reusar le a tabela de grupos gravada na rodada anterior e refaz so as somas.
 
-Contas, por grupo (linha, sentido, parada, dia, faixa horaria), com H o headway,
-n a quantidade e m a media:
-  dev2       = soma de (H - m)^2
-  excesso    = dev2 / (2 n m): espera estimada menos espera regular, a mesma
-               conta do mart fct_headway_parada_faixa
-  peso       = n m, o tempo coberto pelo grupo. Somar excesso x peso da a espera
-               extra de um passageiro que chega ao acaso em qualquer parada e
-               instante; excesso x peso = dev2 / 2.
-  colado     = H < 0,25 m (bunching)
-  reducao    = para cada colado H_i com o anterior H_{i-1} nao colado, igualar
-               os dois (o onibus atrasado e o que vem colado nele) tira
-               (H_{i-1} - H_i)^2 / 2 de dev2 sem mudar a media.
-  vies       = a passagem e interpolada dentro do intervalo entre duas posicoes;
-               com erro uniforme de largura intervalo_s / paradas_no_intervalo,
-               a variancia por passagem e largura^2 / 12. O erro soma 2 x essa
-               variancia ao E[(H-m)^2] e infla o excesso em var_passagem / m.
+As contas (grupos, dev2, colado, reducao, vies) estao em servico/metricas.py,
+que o painel tambem usa.
 """
 import csv
 import os
@@ -31,15 +17,13 @@ import sys
 
 sys.path.insert(0, "/app")
 from silver.processar import sessao  # noqa: E402
-from pyspark.sql import Window as W, functions as F  # noqa: E402
+from pyspark.sql import functions as F  # noqa: E402
+from servico.metricas import CHAVE, MIN_HEADWAYS, calcular_grupos as grupos_da_janela, metricas, preparar  # noqa: E402
 
 INI, FIM = "2026-09-15", "2026-11-05"
-COLADO = 0.25
-MIN_HEADWAYS = 3  # var min_headways_parada do dbt
 G = "/app/dados/gold"
 GTFS = "/app/dados/gtfs_estatico"
 SAIDA = "/app/dados/analise"
-CHAVE = ["route_id", "direction_id", "stop_id", "data_bh", "faixa_horaria", "ordem_faixa"]
 
 
 def ler(caminho):
@@ -59,75 +43,11 @@ def gravar(df, nome, ordem=None):
 
 
 def calcular_grupos():
-    faixa = F.broadcast(ler("ref/faixa_horaria").select("hora_bh", "faixa_horaria", "ordem_faixa"))
-    h = (ler("int/int_headways")
-         .where(f"headway_valido and data_bh between '{INI}' and '{FIM}'")
-         .join(faixa, "hora_bh")
-         .select(*CHAVE, "passagem_unix", "viagem_id", "stop_sequence", "headway_s"))
-    g = W.partitionBy(*CHAVE)
-    go = g.orderBy("passagem_unix", "viagem_id", "stop_sequence")
-    h = (h.withColumn("n", F.count("*").over(g))
-          .withColumn("m", F.avg("headway_s").over(g))
-          .where(f"n >= {MIN_HEADWAYS} and m > 0")
-          .withColumn("colado", F.col("headway_s") < COLADO * F.col("m"))
-          .withColumn("ant", F.lag("headway_s").over(go))
-          .withColumn("ant_colado", F.lag("colado").over(go)))
-    par = F.col("colado") & F.col("ant").isNotNull() & ~F.col("ant_colado")
-    grupos = h.groupBy(*CHAVE).agg(
-        F.count("*").alias("n"),
-        F.sum("headway_s").cast("double").alias("soma"),
-        F.sum(F.pow(F.col("headway_s") - F.col("m"), 2)).alias("dev2"),
-        F.sum(F.col("colado").cast("int")).alias("colados"),
-        F.sum((F.col("headway_s") < 60).cast("int")).alias("abaixo_60s"),
-        F.sum(F.when(par, F.pow(F.col("ant") - F.col("headway_s"), 2) / 2).otherwise(0)).alias("reducao"),
-        F.sum(par.cast("int")).alias("pares"),
-        F.sum((F.col("colado") & F.col("ant").isNull()).cast("int")).alias("pulo_primeiro"),
-        F.sum((F.col("colado") & F.coalesce(F.col("ant_colado"), F.lit(False))).cast("int")).alias("pulo_colado"),
-    )
-    # Histograma de H/m, em classes de 0,05 ate 4 (a ultima junta o resto).
-    hist = (h.withColumn("classe", F.least(F.floor(F.col("headway_s") / F.col("m") / 0.05), F.lit(80)))
-             .groupBy("route_id", "direction_id", "data_bh", "faixa_horaria", "classe").count())
-
-    # Variancia do erro de interpolacao, media por grupo.
-    p = (ler("int/int_passagens")
-         .where(f"motivo_exclusao is null and data_bh between '{INI}' and '{FIM}'")
-         .join(faixa, "hora_bh")
-         .withColumn("var_p", F.pow(F.expr("try_divide(intervalo_s, paradas_no_intervalo)"), 2) / 12)
-         .groupBy(*CHAVE).agg(F.avg("var_p").alias("var_passagem")))
-
-    linha = ler("marts/fct_servico_linha_faixa").select(
-        "route_id", "direction_id", "data_bh", "faixa_horaria", "tipo_dia", "alta_frequencia")
-    chave_linha = ["route_id", "direction_id", "data_bh", "faixa_horaria"]
-    grupos = grupos.join(linha, chave_linha).join(p, CHAVE, "left")
+    grupos, hist = grupos_da_janela(ler, INI, FIM)
     grupos.write.mode("overwrite").parquet(f"{SAIDA}/grupos.parquet")
-    (hist.join(linha, chave_linha).groupBy("tipo_dia", "alta_frequencia", "classe")
+    (hist.groupBy("tipo_dia", "alta_frequencia", "classe")
          .agg(F.sum("count").alias("headways"))
          .write.mode("overwrite").parquet(f"{SAIDA}/hist.parquet"))
-
-
-def dividir(a, b):
-    """Spark com ANSI ligado da erro ao dividir por zero; aqui vira nulo."""
-    return F.when(b != 0, a / b)
-
-
-def metricas(df, chaves):
-    """Somas por recorte; os minutos sao medias ponderadas pelo tempo coberto."""
-    return df.groupBy(*chaves).agg(
-        F.count("*").alias("grupos"),
-        F.sum("n").alias("headways"),
-        F.round(F.sum("soma") / 3600, 1).alias("horas"),
-        F.round(F.sum(F.col("soma") * F.col("soma") / F.col("n")) / 2 / F.sum("soma") / 60, 3).alias("regular_min"),
-        F.round(F.sum("dev2") / 2 / F.sum("soma") / 60, 3).alias("excesso_min"),
-        F.round(F.sum("dev2") / 2 / 60 / 3600, 1).alias("volume_min_h"),
-        F.round(F.sum("colados") / F.sum("n"), 4).alias("colados_pct"),
-        F.round(F.sum("abaixo_60s") / F.sum("n"), 4).alias("abaixo_60s_pct"),
-        F.round(dividir(F.sum("reducao"), F.sum("dev2")), 4).alias("reducao_pct"),
-        F.sum("pares").alias("pares"),
-        F.sum("pulo_primeiro").alias("pulo_primeiro"),
-        F.sum("pulo_colado").alias("pulo_colado"),
-        F.round(F.sum(F.col("n") * F.col("var_passagem")) / F.sum("soma") / 60, 3).alias("vies_min"),
-        F.round(dividir(F.sum(F.col("n") * F.col("var_passagem")), F.sum("dev2") / 2), 4).alias("vies_pct"),
-    )
 
 
 def gtfs(nome):
@@ -135,7 +55,7 @@ def gtfs(nome):
 
 
 def resumir():
-    gr = spark.read.parquet(f"{SAIDA}/grupos.parquet").cache()
+    gr = preparar(spark.read.parquet(f"{SAIDA}/grupos.parquet")).cache()
     tipo = ["tipo_dia", "alta_frequencia"]
 
     gravar(metricas(gr, tipo), "rede", tipo)

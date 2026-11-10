@@ -28,3 +28,6 @@ gold/.user.yml
 
 # Airflow (fase 6)
 orquestracao/logs/
+
+# Painel (segredos do Streamlit)
+.streamlit/secrets.toml
