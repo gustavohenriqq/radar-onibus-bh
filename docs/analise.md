@@ -237,6 +237,49 @@ para `analise/saida/`, os gráficos saem com:
 
     py -3.11 analise/graficos.py analise/saida
 
+## 9. Dias fora do normal e o motivo
+
+Busca feita em 10/11/2026, cruzando os dias atípicos de `radar.linha_dia_faixa`
+com notícias e com a Silver. Espera extra em minutos por passageiro, todas as
+linhas. O painel marca esses dias no gráfico "Dia a dia".
+
+| Dia | O que os dados mostram | Motivo encontrado |
+|---|---|---|
+| Dom 04/10 | 4,29 min, contra 2,4 a 3,0 nos outros domingos | Eleição, 1º turno: ônibus de graça e 4 mil viagens extras das 5h às 20h ([Diário do Transporte](https://diariodotransporte.com.br/2026/10/03/transporte-coletivo-de-belo-horizonte-mg-sera-gratuito-neste-domingo-04-durante-primeiro-turno-das-eleicoes-2026/)) |
+| Seg 05/10 | 4,23 min, no nível dos dias vizinhos: a chuva não se destacou no dia inteiro | Quase 50 mm de chuva de manhã, abertura do período chuvoso ([O Tempo](https://www.otempo.com.br/cidades/2026/10/5/bh-inicia-periodo-chuvoso-com-alerta-apos-quase-50-mm-de-chuva-em-duas-horas)) |
+| 13 a 16/10 | espera abaixo do normal | Recesso da Semana do Professor na rede municipal, segundo o calendário publicado em fevereiro ([EM](https://www.em.com.br/trends/2026/02/7346832-volta-as-aulas-em-bh-o-calendario-escolar-de-2026.html)) |
+| Ter 20/10 e Qua 21/10 | 21/10 com a noite 2,2 vezes o normal; a 5033 entre as piores | Itinerário novo da 5033 desde 20/10 ([EM](https://www.em.com.br/gerais/2026/10/7523633-bh-altera-itinerarios-das-linhas-de-onibus-5033-e-sc01-r-saiba-o-que-mudou.html)); em 21/10, ato de campanha no Centro das 15h às 17h ([EM](https://www.em.com.br/gerais/2026/10/7524900-lula-em-bh-ato-no-centro-altera-transito-e-exige-atencao-dos-motoristas.html)) e obra que mudou o trânsito da Av. Cristiano Machado ([PBH](https://prefeitura.pbh.gov.br/noticias/cristiano-machado-tera-alteracoes-no-transito-partir-desta-quarta-feira-21-para-obras-dos)) |
+| Dom 25/10 | 5,57 min, o pior dia do período | Eleição, 2º turno, com 4 mil viagens extras ([O Tempo](https://www.otempo.com.br/cidades/2026/10/22/segundo-turno-em-bh-tera-transporte-gratuito-e-reforco-de-4-mil-viagens-saiba-os-horarios)), e temporal à tarde com rajadas acima de 89 km/h, árvores e semáforos no chão e falta de luz ([EM](https://www.em.com.br/gerais/2026/10/7527426-domingo-de-eleicao-temporal-provoca-quedas-de-semaforos-e-falta-de-energia.html)) |
+| Seg 26/10 | muitos intervalos longos descartados | Depois do temporal: 45 mil imóveis sem luz de manhã ([NC News](https://ncnews.com.br/2026/10/26/temporal-deixa-45-mil-imoveis-sem-energia-em-belo-horizonte-nesta-segunda-feira-26/)) e 135 chamados por árvores em vias ([O Tempo](https://www.otempo.com.br/cidades/2026/10/26/bh-registra-135-chamados-por-arvores-caidas-em-vias-publicas-apos-temporal-veja-imagens)) |
+
+Nos domingos de eleição a frota extra rodou com quadro próprio ("Domingo
+Eleição"). A medida compara cada intervalo com a média da faixa, então um
+quadro diferente do domingo comum pesa na conta junto com o trânsito.
+
+Dois casos não tiveram evento noticiado, e a Silver explica os dois.
+
+**Suplementares (S), 16/10, 19 a 23/10 e 29/10: falha de GPS, não de serviço.**
+A espera extra das linhas S foi de 8,08 min em 19/10 e 9,41 em 21/10, contra
+2,7 a 2,8 em 14 e 15/10. Mas a frota e as viagens não mudaram: em 19/10 rodaram
+242 ônibus S e 1.798 viagens, contra 241 e 1.831 em 14/10. O que caiu foram as
+posições: 112,7 mil contra 176,7 mil. Cada ônibus apareceu no feed por cerca de
+287 minutos, contra 506. A falha vem em horas: em 21/10, das 10h às 12h, só 87 a
+90 ônibus S mandaram posição, contra cerca de 195 em 14/10. Com passagens
+faltando, o intervalo medido entre ônibus fica mais longo do que foi, e a
+espera extra das S nesses dias está inflada. As convencionais não tiveram a
+falha. Nenhuma paralisação do suplementar foi noticiada nessas datas (a última
+achada foi em 06/05).
+
+**Convencionais, 01 a 09/10: espera um pouco maior, sem corte de serviço.**
+Nos dias úteis desse trecho a espera extra foi 4,30 min, contra 3,71 no resto
+de outubro e novembro, com 4,6% menos intervalos por dia. Frota e viagens
+ficaram iguais (cerca de 2.505 ônibus e 21.500 a 21.750 viagens por dia útil).
+O feed parou por 40 a 85 minutos em 01, 02, 05, 06 e 07/10. Parte da diferença
+é falta de dado; o resto não teve causa achada.
+
+Nenhuma greve dos rodoviários das linhas convencionais foi noticiada no
+período.
+
 ## Número, onde conferir
 
 Todos os arquivos estão em `analise/saida/`. Salvo indicação, a linha é

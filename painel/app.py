@@ -554,6 +554,24 @@ def q_faixa(f):
     grafico(estilo(fig, 400))
 
 
+# Eventos conferidos em notícias (fontes em docs/analise.md, seção 9).
+EVENTOS = {
+    "2026-10-04": "Eleição, 1º turno: ônibus de graça e 4 mil viagens extras",
+    "2026-10-05": "Chuva forte de manhã, quase 50 mm",
+    "2026-10-13": "Recesso escolar da rede municipal (13 a 16/10)",
+    "2026-10-14": "Recesso escolar da rede municipal (13 a 16/10)",
+    "2026-10-15": "Recesso escolar da rede municipal (13 a 16/10)",
+    "2026-10-16": "Recesso escolar da rede municipal (13 a 16/10)",
+    "2026-10-20": "Itinerário novo da linha 5033",
+    "2026-10-21": "Ato de campanha no Centro (15h às 17h) e obra muda o trânsito da Cristiano Machado",
+    "2026-10-25": "Eleição, 2º turno, com 4 mil viagens extras; temporal à tarde derruba árvores e semáforos",
+    "2026-10-26": "Depois do temporal: 45 mil imóveis sem luz de manhã e árvores caídas em vias",
+}
+# Mesmos ônibus e viagens, mas com horas sem posição: a espera extra das linhas S fica inflada.
+FALHA_S = {d: "GPS das suplementares falhou em parte do dia" for d in
+           ("2026-10-16", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-29")}
+
+
 def q_tendencia(f):
     titulo("03 · DIA A DIA", "Espera extra por dia", "Minutos por passageiro em cada dia do período")
     df = dados(sql_metricas(["data_bh"], f["onde"]), f["params"])
@@ -566,10 +584,22 @@ def q_tendencia(f):
     fig.add_scatter(x=df["data_bh"], y=df["excesso_min"], name="Espera extra", mode="lines+markers",
                     line=dict(color=CORAL, width=2.5), marker=dict(size=6), fill="tozeroy",
                     fillcolor="rgba(226,130,143,.10)", hovertemplate="%{y:.2f} min<extra></extra>")
+    dia = df["data_bh"].astype(str).str[:10]
+    sup = not f["linhas"] or any(str(r).startswith("S") for r in f["linhas"])
+    for nome, notas, simbolo, cor in (("Evento na cidade", EVENTOS, "diamond", DOURADO),
+                                      ("Falha de GPS nas suplementares", FALHA_S if sup else {}, "circle-open", SUAVE)):
+        m = dia.isin(notas)
+        if m.any():
+            fig.add_scatter(x=df.loc[m, "data_bh"], y=df.loc[m, "excesso_min"], name=nome, mode="markers",
+                            marker=dict(symbol=simbolo, size=11, color=cor, line=dict(width=2, color=cor)),
+                            customdata=dia[m].map(notas), hovertemplate="%{customdata}<extra></extra>")
     fig.update_xaxes(tickformat="%d/%m", hoverformat="%a %d/%m")
     fig.update_yaxes(rangemode="tozero")
     fig.update_layout(hovermode="x unified")
     grafico(estilo(fig, 400))
+    if dia.isin(EVENTOS).any() or (sup and dia.isin(FALHA_S).any()):
+        st.caption("Passe o mouse no losango para ver o evento do dia, achado em notícias. O círculo vazado marca "
+                   "dias em que o GPS das linhas suplementares (S) falhou: a espera delas parece maior do que foi.")
 
 
 def q_linhas(f, nomes):
