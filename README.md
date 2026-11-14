@@ -13,7 +13,9 @@ A pergunta que o projeto vai responder:
 **Painel público: [radar-onibus-bh.streamlit.app](https://radar-onibus-bh.streamlit.app/)**,
 atualizado todo dia com o dia de BH que fechou.
 
-![Topo do painel: em dia útil, a irregularidade soma 2,9 minutos à espera no ponto](docs/img/painel_topo.png)
+![Visão geral do painel: a espera no ponto, quanto dela é irregularidade e a espera extra dia a dia](docs/img/painel_visao.png)
+
+O mesmo conteúdo existe como relatório Power BI, gerado por script ([seção Power BI](#power-bi)).
 
 ## Status
 
@@ -584,7 +586,12 @@ docker compose exec airflow-scheduler airflow dags trigger radar_reprocessar   -
 ## Painel
 
 O painel lê um Postgres gratuito no [Neon](https://neon.tech) e roda no
-Streamlit Community Cloud, que publica a branch `painel`.
+Streamlit Community Cloud, que publica a branch `painel`. São 11 páginas num
+menu lateral, as mesmas do relatório Power BI e na mesma ordem: Visão geral,
+Onde e quando, Linhas, Pontos, Colados, Previsão, Confiança, Simulador, Ficha
+da linha, O que pesa e Onde agir. Os filtros de período, tipo de dia e
+frequência valem para todas e ficam na URL, então um recorte pode ser
+compartilhado por link.
 
 **Por que não ler a Gold direto.** As marts têm cerca de 2 GB, ficam em Delta
 na VM de processamento e o Neon grátis aceita 0,5 GB. A tarefa
@@ -612,16 +619,56 @@ compara com os CSVs de `analise/saida`: 23.950 números, nenhuma divergência.
 Secrets do Streamlit. Os filtros entram na consulta como parâmetro, nunca
 colados no SQL.
 
-![Espera por faixa horária e dia a dia, com os eventos marcados](docs/img/painel_tempo.png)
+O gráfico "Dia a dia" clareia e numera as barras dos dias com evento na cidade
+(eleições, temporal de 25/10, recesso escolar). Com as linhas suplementares
+incluídas, a dica do dia avisa quando o GPS delas falhou. O motivo de cada dia,
+com fonte, está na [seção 9 da análise](docs/analise.md).
 
-O gráfico "Dia a dia" marca com um losango os dias com evento na cidade
-(eleições, temporal de 25/10, recesso escolar) e com um círculo vazado os dias
-em que o GPS das linhas suplementares falhou. O motivo de cada um, com fonte,
-está na [seção 9 da análise](docs/analise.md).
+![O que pesa: a espera extra segue os colados, ponto cheio não espera mais, dia útil contra fim de semana](docs/img/painel_porque.png)
 
-![Linhas que mais somam espera extra](docs/img/painel_linhas.png)
+![Pontos: mapa da espera extra por ponto nos últimos 28 dias e os piores pontos](docs/img/painel_pontos.png)
 
-![Ônibus colados e o teste do modelo de previsão](docs/img/painel_colados.png)
+![Ônibus colados: distribuição dos intervalos, colados por faixa horária e as linhas onde mais se cola](docs/img/painel_colados.png)
+
+![Previsão: o teste único do modelo da Fase 5, alertas e acertos por dia e por linha](docs/img/painel_previsao.png)
+
+![Simulador: a espera extra hoje e com os ônibus colados espaçados, por faixa e por linha](docs/img/painel_simulador.png)
+
+## Power BI
+
+A pasta [`powerbi/`](powerbi/) tem o mesmo painel como relatório Power BI, no
+formato PBIP (o modelo em TMDL e as páginas em PBIR, arquivos de texto que o
+Git consegue comparar). Nada nele é feito à mão no Desktop:
+[`powerbi/gerar_pbip.py`](powerbi/gerar_pbip.py) escreve o projeto inteiro a
+partir de três arquivos.
+
+- [`modelo.py`](powerbi/modelo.py): tabelas importadas do mesmo esquema
+  `radar` do Neon e as medidas em DAX. As medidas repetem as fórmulas de
+  [`painel/consultas.py`](painel/consultas.py), então o relatório e o painel
+  web mostram o mesmo número para o mesmo filtro. Nenhum número é digitado.
+- [`relatorio.py`](powerbi/relatorio.py): as 11 páginas e a posição de cada
+  quadro. Cada quadro é um SVG montado por uma medida DAX
+  ([`paineis.py`](powerbi/paineis.py)) e exibido pelo visual HTML Content.
+- [`arte.py`](powerbi/arte.py): o fundo fixo de cada página (menu, letreiro,
+  títulos e molduras), desenhado em HTML e fotografado pelo Edge.
+
+A Ficha da linha usa um visual próprio,
+[`powerbi/carrossel/`](powerbi/carrossel/): um carrossel de cartões, um por
+linha, que filtra a página pela linha do centro.
+
+**O endereço do banco não vai para o Git.** O gerador lê o `PAINEL_URL` do
+`.env` e põe o servidor num parâmetro do modelo. Um filtro do Git
+([`powerbi/tools/git_censura.py`](powerbi/tools/git_censura.py)) troca o valor
+real por um marcador na hora do commit e o devolve na pasta local. A senha
+nunca passa pelo script: o Desktop pede na primeira atualização.
+
+![Power BI, Visão geral](docs/img/pbi_visao.png)
+
+![Power BI, Onde e quando: mapas de calor por linha, faixa horária e dia](docs/img/pbi_onde.png)
+
+![Power BI, Pontos: o mapa da espera extra por ponto](docs/img/pbi_pontos.png)
+
+![Power BI, Simulador](docs/img/pbi_simulador.png)
 
 ## O que os dados sugerem
 
@@ -631,7 +678,7 @@ que a sustenta. O recorte é o da análise: dia útil, linhas de alta frequênci
 de espera extra por passageiro, sobre 5,94 de espera com ônibus regulares. As
 contas estão em [`docs/analise.md`](docs/analise.md) e [`docs/ml.md`](docs/ml.md),
 e as que não estão lá saem direto dos CSVs de `analise/saida/` (indicado em
-cada item). No Power BI (pasta `powerbi/`), a página "Onde agir" mostra os
+cada item). No painel e no Power BI, a página "Onde agir" mostra os
 itens 2 a 7, e a página "O que pesa" mostra os itens 1, 8 e 9 com o recorte
 dos filtros.
 
@@ -984,14 +1031,26 @@ servico/
   metricas.py        somas reagregáveis e métricas da espera, usadas pela análise e pelo banco
   exportar.py        carga diária da Gold para o Neon, numa transação
 painel/
-  app.py             painel Streamlit público
+  app.py             painel Streamlit público: menu, filtros e a página escolhida
+  paginas.py         as 11 páginas, com os mesmos quadros do Power BI
+  visual.py          aparência: cores, letreiro, painéis numerados e gráficos
+  banco.py           conexão só leitura e cache das consultas
   consultas.py       as métricas em SQL, com filtros por parâmetro
+  eventos.py         dias com evento na cidade e falhas de GPS, usados pelos dois painéis
   conciliar.py       segunda conta: banco contra os CSVs da análise
   formato.py         números no formato brasileiro
+powerbi/
+  gerar_pbip.py      escreve o projeto Power BI (Radar.pbip) a partir dos três abaixo
+  modelo.py          tabelas, relações e medidas DAX (TMDL)
+  relatorio.py       páginas e layout dos quadros (PBIR)
+  paineis.py         quadros em SVG montados por medida DAX
+  arte.py            fundo fixo de cada página
+  carrossel/         visual próprio da Ficha da linha (TypeScript)
+  tools/             filtro do Git que esconde o endereço do banco e utilitários do Desktop
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
 Dockerfile.ml        imagem da Fase 5: a do Spark mais pandas e scikit-learn
-tests/               134 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
+tests/               137 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
                      Gold, limpeza do Airflow, o que o modelo da Fase 5 pode ver, banco e painel
 ```
 
