@@ -101,8 +101,10 @@ body {{ position: relative; font-family: 'Bahnschrift', 'Segoe UI', sans-serif; 
   border: 1px solid color-mix(in srgb, var(--acc) 16%, rgba(148,163,255,.10));
   background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 8%, {PAINEL}), {PAINEL} 110px);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acc) 30%, transparent), 0 30px 60px -45px rgba(0,0,0,.9); }}
-.painel .num {{ position: absolute; left: 24px; top: 16px; font-size: 68px; font-weight: 700; font-stretch: 75%;
-  line-height: .85; letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 1.4px var(--acc); opacity: .9; }}
+.painel .num {{ position: absolute; left: 24px; top: 18px; font-size: 62px; font-weight: 700; font-stretch: 75%;
+  line-height: .85; letter-spacing: .01em; opacity: .9;
+  /* contorno so por fora: o miolo pintado na cor do painel esconde as linhas internas da fonte (o cruzamento do 4) */
+  color: color-mix(in srgb, var(--acc) 5%, {PAINEL}); -webkit-text-stroke: 2.8px var(--acc); paint-order: stroke fill; }}
 .painel .olho {{ position: absolute; left: 96px; top: 18px; color: var(--acc); font-size: 14px; font-weight: 700;
   letter-spacing: .16em; }}
 .painel .tit {{ position: absolute; left: 96px; top: 38px; color: {TEXTO}; font-size: 30px; font-weight: 700;
