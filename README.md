@@ -10,6 +10,11 @@ A pergunta que o projeto vai responder:
 > Quanto tempo o passageiro perde por irregularidade do serviço, onde isso se
 > concentra, e dá para prever o atraso do próximo ônibus?
 
+**Painel público: [radar-onibus-bh.streamlit.app](https://radar-onibus-bh.streamlit.app/)**,
+atualizado todo dia com o dia de BH que fechou.
+
+![Topo do painel: em dia útil, a irregularidade soma 2,9 minutos à espera no ponto](docs/img/painel_topo.png)
+
 ## Status
 
 | Fase | Entrega | Situação |
@@ -20,6 +25,7 @@ A pergunta que o projeto vai responder:
 | **3. Gold e dbt** | Headway, irregularidade e espera por linha e faixa horária | **pronta em 05/11/2026**: 311 linhas, 49,4 milhões de headways, conferida por uma segunda conta; corredor ficou de fora |
 | **4. Análise** | Conclusão com recomendação numérica | **pronta em 06/11/2026**: em dia útil a irregularidade soma 2,9 min à espera (+50%), 20 linhas somam 55% disso; [docs/analise.md](docs/analise.md) |
 | **5. ML** | Prever ônibus colados dez paradas antes | **pronta em 08/11/2026**: no teste, PR-AUC 0,511 contra 0,392 da persistência; com a hipótese de custo, alertar poupa só 0,8%; [docs/ml.md](docs/ml.md) |
+| **Painel** | Gold resumida no Neon e Streamlit público | **no ar desde 10/11/2026**: carga diária pela DAG, mesmos números da análise (23.950 conferidos, 0 divergências); [seção Painel](#painel) |
 | **6. Orquestração** | Airflow com backfill por janela de data | **no ar desde 06/11/2026**: Silver e Gold a cada hora fechada, reprocessamento idempotente por janela |
 
 ## O feed, medido
@@ -575,6 +581,48 @@ ssh -L 8080:localhost:8080 ubuntu@<ip-da-vm>        # e abrir http://localhost:8
 docker compose exec airflow-scheduler airflow dags trigger radar_reprocessar   -c '{"de": "2026-10-19", "ate": "2026-10-25", "camadas": "so_gold"}'
 ```
 
+## Painel
+
+O painel lê um Postgres gratuito no [Neon](https://neon.tech) e roda no
+Streamlit Community Cloud, que publica a branch `painel`.
+
+**Por que não ler a Gold direto.** As marts têm cerca de 2 GB, ficam em Delta
+na VM de processamento e o Neon grátis aceita 0,5 GB. A tarefa
+`exportar_servico` da DAG horária ([servico/exportar.py](servico/exportar.py))
+manda para o banco só **somas reagregáveis**: por linha, sentido, dia e faixa,
+a soma dos intervalos, a soma dos quadrados dos desvios e as contagens. Como
+toda métrica é razão de somas ([servico/metricas.py](servico/metricas.py)),
+qualquer recorte do painel (só uma linha, só o pico, só uma semana) dá o mesmo
+número que a conta feita grupo a grupo na Gold. As tabelas somam menos de
+40 MB.
+
+**Uma carga por dia, numa transação.** Quando o dia de BH fecha, a tarefa
+apaga os últimos três dias do banco, copia de novo (a Gold pode ter refeito o mais
+recente), confere as contagens e só então confirma. Se algo falhar no meio, o
+painel continua mostrando a carga anterior. Cada carga vira uma linha em
+`radar.cargas`, que o painel usa para dizer até que dia tem dado.
+
+**Mesmos números da análise.** A análise e a exportação usam as mesmas
+funções. Além disso, [painel/conciliar.py](painel/conciliar.py) recalcula em SQL
+as métricas de [docs/analise.md](docs/analise.md) na janela de 15/09 a 05/11 e
+compara com os CSVs de `analise/saida`: 23.950 números, nenhuma divergência.
+
+**Duas URLs de banco.** A exportação usa `NEON_URL`, que escreve, e fica só no
+`.env` da VM. O painel usa `PAINEL_URL`, um usuário só leitura, guardado nos
+Secrets do Streamlit. Os filtros entram na consulta como parâmetro, nunca
+colados no SQL.
+
+![Espera por faixa horária e dia a dia, com os eventos marcados](docs/img/painel_tempo.png)
+
+O gráfico "Dia a dia" marca com um losango os dias com evento na cidade
+(eleições, temporal de 25/10, recesso escolar) e com um círculo vazado os dias
+em que o GPS das linhas suplementares falhou. O motivo de cada um, com fonte,
+está na [seção 9 da análise](docs/analise.md).
+
+![Linhas que mais somam espera extra](docs/img/painel_linhas.png)
+
+![Ônibus colados e o teste do modelo de previsão](docs/img/painel_colados.png)
+
 ## O que foi descartado, com a evidência
 
 Cada alternativa abaixo foi medida no dado real antes de ser descartada.
@@ -820,11 +868,19 @@ ml/
   medir_alvo_passado.py  ressalva 10: B já tinha passado por s+10 na decisão?
   saida/             CSVs da rodada de 08/11
 docs/ml.md           conclusão da Fase 5, com gráficos e ressalvas
+servico/
+  metricas.py        somas reagregáveis e métricas da espera, usadas pela análise e pelo banco
+  exportar.py        carga diária da Gold para o Neon, numa transação
+painel/
+  app.py             painel Streamlit público
+  consultas.py       as métricas em SQL, com filtros por parâmetro
+  conciliar.py       segunda conta: banco contra os CSVs da análise
+  formato.py         números no formato brasileiro
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
 Dockerfile.ml        imagem da Fase 5: a do Spark mais pandas e scikit-learn
-tests/               120 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
-                     Gold, limpeza do Airflow e o que o modelo da Fase 5 pode ver
+tests/               134 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
+                     Gold, limpeza do Airflow, o que o modelo da Fase 5 pode ver, banco e painel
 ```
 
 ## Agradecimento
