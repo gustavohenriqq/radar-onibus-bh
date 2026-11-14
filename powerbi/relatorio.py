@@ -16,7 +16,7 @@ from modelo import AMBAR, AZUL, BORDA, FUNDO, NS, PAINEL, PAINEL2, SUAVE, APAGAD
 
 W, H = 1920, 1080
 TRILHO = 104  # largura do menu lateral desenhado na arte
-NAV_TOPO, NAV_ITEM = 168, 88  # primeiro item do menu e altura de cada um (10 paginas ate 1048)
+NAV_TOPO, NAV_ITEM = 168, 80  # primeiro item do menu e altura de cada um (11 paginas ate 1048)
 FONTE = "Segoe UI"
 FONTE_FORTE = "Segoe UI Semibold"
 HTML_VISUAL = "htmlContent443BE3AD55E043BF878BED274D3A6865"  # HTML Content (AppSource, certificado)
@@ -155,6 +155,15 @@ PAGINAS = [
                "Azul: com intervalos iguais · âmbar: a espera extra", AZUL),
         Painel("fdia", 1012, 648, 876, 408, "03", "DIA A DIA", "Espera extra por dia",
                "Barra clara: dia com evento na cidade · tracejado azul: média do período", AMBAR),
+    ]),
+    Pag("porque", "O que pesa", "O que", "pesa", "O QUE EXPLICA A ESPERA EXTRA", "porque", [
+        Painel("plinhas", 136, 148, 1100, 560, "01", "INTERVALO OU COLADOS", "A espera extra segue os colados",
+               "Só alta frequência · cada bolha é uma linha com 0,1% ou mais das horas · r: correlação entre as linhas", VERMELHO),
+        Painel("ppontos", 1252, 148, 636, 560, "02", "PONTOS", "Ponto cheio não espera mais",
+               "Últimos 28 dias, pontos pelo número de linhas · não segue período nem linha", AMBAR),
+        Painel("pdias", 136, 724, 1100, 332, "03", "TIPO DE DIA", "Dia útil, sábado e domingo",
+               "Ignora o filtro de tipo de dia · tracejado: todos os dias", AZUL),
+        Painel("pleitura", 1252, 724, 636, 332, "04", "LEITURA", "O que muda na prática", "", VERDE),
     ]),
     Pag("acoes", "Onde agir", "Onde", "agir", "O QUE OS NÚMEROS SUGEREM", "acoes", [
         Painel("rotas", 136, 148, 860, 908, "01", "ROTAS", "Linhas que vão ao centro esperam mais",

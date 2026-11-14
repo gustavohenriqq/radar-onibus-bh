@@ -103,6 +103,11 @@
           "type": "Image"
         },
         {
+          "name": "fundo_porque.png",
+          "path": "fundo_porque.png",
+          "type": "Image"
+        },
+        {
           "name": "fundo_previsao.png",
           "path": "fundo_previsao.png",
           "type": "Image"

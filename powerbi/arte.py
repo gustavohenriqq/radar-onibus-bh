@@ -50,6 +50,7 @@ ICONES = {
     "ficha": '<rect x="5" y="3" width="16" height="20" rx="2.5"/><path d="M9 9h8M9 13h8M9 17h5"/>',
     "acoes": '<circle cx="13" cy="13" r="9"/><circle cx="13" cy="13" r="4.5"/>'
              '<circle cx="13" cy="13" r="1.4" fill="currentColor"/>',
+    "porque": '<path d="M13 4v18M6 22h14M4 8h18"/><path d="M7 8l-3 7a3 3 0 0 0 6 0zM19 8l-3 7a3 3 0 0 0 6 0z"/>',
 }
 
 CSS = f"""
@@ -78,7 +79,7 @@ body {{ position: relative; font-family: 'Bahnschrift', 'Segoe UI', sans-serif; 
 .item svg {{ width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round;
   stroke-linejoin: round; }}
 .item.ativo {{ color: {TEXTO}; background: linear-gradient(90deg, rgba(255,179,71,.16), transparent); }}
-.item.ativo::before {{ content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 4px;
+.item.ativo::before {{ content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px;
   border-radius: 0 4px 4px 0; background: {AMBAR}; }}
 .item.ativo svg {{ color: {AMBAR}; }}
 .letreiro {{ position: absolute; left: 136px; top: 30px; height: 70px; display: flex; align-items: center; gap: 16px;
@@ -195,9 +196,12 @@ def fotografar(nome: str, conteudo: str, w: int, h: int) -> Path:
                             f"--force-device-scale-factor={ESCALA_PX}", f"--window-size={w},{h}",
                             "--virtual-time-budget=6000", f"--screenshot={png}", arq.as_uri()],
                            check=True, capture_output=True, timeout=180)
-        if png.exists():
-            return png
-        time.sleep(3)
+            # o PNG pode chegar segundos depois de o processo sair: espera ate 30 s antes de tentar de novo
+            for _ in range(30):
+                if png.exists() and png.stat().st_size > 0:
+                    time.sleep(1)  # termina de gravar
+                    return png
+                time.sleep(1)
     sys.exit(f"O Edge nao gravou {png.name}")
 
 

@@ -1301,6 +1301,156 @@ def html_corredores(w: int, h: int) -> str:
             f"RETURN\n    IF ( COUNTROWS ( tp ) = 0, {vazio(w, h)},\n    {svg(w, h, corpo)} )")
 
 
+PARTE_MIN_LINHA = 0.001  # linha entra na dispersao com 0,1% ou mais das horas (a analise usou 2.000 h de 1,75 mi)
+
+
+def correlacao(nome: str, x: str, y: str) -> str:
+    """Correlacao de Pearson entre duas colunas da tabela t (n linhas), como VAR DAX."""
+    return (f"VAR {nome}_x = SUMX ( t, {x} ) VAR {nome}_y = SUMX ( t, {y} )\n"
+            f"VAR {nome}_xy = SUMX ( t, {x} * {y} ) VAR {nome}_xx = SUMX ( t, {x} ^ 2 ) "
+            f"VAR {nome}_yy = SUMX ( t, {y} ^ 2 )\n"
+            f"VAR {nome} = DIVIDE ( n * {nome}_xy - {nome}_x * {nome}_y,\n"
+            f"    SQRT ( ( n * {nome}_xx - {nome}_x ^ 2 ) * ( n * {nome}_yy - {nome}_y ^ 2 ) ) )\n")
+
+
+def html_porque_linhas(w: int, h: int) -> str:
+    """Duas dispersoes por linha: espera regular (intervalo) e colados contra espera extra, com a correlacao."""
+    gap = 90
+    larg_g = (w - 60 - gap) // 2
+    top, base = 74, h - 46
+    alto = base - top
+
+    def forca(r: str) -> str:
+        return (f'SWITCH ( TRUE (), ABS ( {r} ) < 0.2, "quase nenhuma relação", ABS ( {r} ) < 0.5, "relação fraca", '
+                f'ABS ( {r} ) < 0.7, "relação média", "relação forte" )')
+
+    def grafico(x0: int, col: str, mx: str, r: str, cor_: str, eixo: str, fmt_max: str, rotulo: str) -> list:
+        x1 = x0 + larg_g
+        bolha = junta("<circle cx='", c(f"{x0} + MIN ( {col} / {mx}, 1 ) * {larg_g}"), "' cy='",
+                      c(f"{base} - MIN ( [@e] / my, 1 ) * {alto}"), "' r='", c("2.5 + 8 * SQRT ( DIVIDE ( [@h], mh ) )"),
+                      f"' fill='{cor_}' fill-opacity='.55' stroke='{FUNDO}' stroke-width='.8'/>")
+        return [
+            texto(x0, 22, rotulo, 14, SUAVE, 700, espaco=1.4),
+            f"<text x='{x0}' y='60' font-size='34' font-weight='700' fill='{cor_}'>r = ", f(r, "0.00"), "</text>",
+            f"<text x='{x0 + 170}' y='58' font-size='18' fill='{TEXTO}' font-family='{FRASE}'>", D(forca(r)), "</text>",
+            f"<line x1='{x0}' x2='{x1}' y1='{base}' y2='{base}' stroke='{APAGADO}'/>",
+            f"<line x1='{x0}' x2='{x0}' y1='{top}' y2='{base}' stroke='{APAGADO}'/>",
+            D(f'CONCATENATEX ( t, {bolha}, "", [@h], DESC )'),
+            texto(x0, base + 20, "0", 14, APAGADO, 400, "middle"),
+            f"<text x='{x1}' y='{base + 20}' font-size='14' fill='{APAGADO}' text-anchor='end'>", f(mx, fmt_max),
+            "</text>",
+            texto((x0 + x1) // 2, h - 2, eixo, 15, SUAVE, 400, "middle", FRASE),
+            texto(x0 - 8, base + 5, "0", 14, APAGADO, 400, "end"),
+            f"<text x='{x0 - 8}' y='{top + 5}' font-size='14' fill='{APAGADO}' text-anchor='end'>", f("my", "0"),
+            "</text>"]
+
+    xa, xb = 60, 60 + larg_g + gap
+    corpo = junta(
+        *grafico(xa, "[@r]", "mr", "r_int", APAGADO, "espera com ônibus regulares (metade do intervalo, min)", "0",
+                 "INTERVALO ENTRE ÔNIBUS"),
+        *grafico(xb, "[@c]", "mc", "r_col", VERMELHO, "intervalos colados", "0%", "ÔNIBUS COLADOS"),
+        f"<text transform='translate(14,{(top + base) // 2}) rotate(-90)' font-size='15' fill='{SUAVE}' "
+        f"text-anchor='middle' font-family='{FRASE}'>espera extra (min)</text>")
+    # so alta frequencia: na baixa o passageiro consulta o horario e a espera extra nao representa ninguem
+    return ('VAR t0 = CALCULATETABLE ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@r", [Espera regular],\n'
+            '        "@c", [Colados], "@e", [Espera extra], "@h", [Horas de serviço] ),\n'
+            '    REMOVEFILTERS ( dim_frequencia ), dim_frequencia[frequencia] = "alta" )\n'
+            "VAR htot = SUMX ( t0, [@h] )\n"
+            f"VAR t = FILTER ( t0, NOT ISBLANK ( [@e] ) && DIVIDE ( [@h], htot ) >= {PARTE_MIN_LINHA} )\n"
+            "VAR n = COUNTROWS ( t )\n"
+            + correlacao("r_int", "[@r]", "[@e]") + correlacao("r_col", "[@c]", "[@e]")
+            + "VAR mr = PERCENTILEX.INC ( t, [@r], 0.98 ) * 1.1\nVAR mc = PERCENTILEX.INC ( t, [@c], 0.98 ) * 1.1\n"
+            "VAR my = PERCENTILEX.INC ( t, [@e], 0.98 ) * 1.15\nVAR mh = MAXX ( t, [@h] )\n"
+            f"RETURN\n    IF ( n < 5, {vazio(w, h, 'Poucas linhas no recorte escolhido')},\n    {svg(w, h, corpo)} )")
+
+
+FAIXAS_LINHAS = [("1 linha", 1, 1), ("2 a 3 linhas", 2, 3), ("4 a 8 linhas", 4, 8), ("9 ou mais", 9, 999)]
+
+
+def html_porque_pontos(w: int, h: int) -> str:
+    """Espera extra nos pontos agrupados pelo numero de linhas que passam neles (ultimos 28 dias)."""
+    rodape = 60
+    rh = (h - rodape) / len(FAIXAS_LINHAS)
+    bx, bl = 190, w - 190 - 90
+    yt = f"y + {rh / 2:.1f}"
+    item = junta(
+        "<text x='0' y='", c(f"{yt} - 2"), f"' font-size='19' font-weight='600' fill='{TEXTO}' font-family='{FRASE}'>",
+        D("[rot]"), "</text>",
+        "<text x='0' y='", c(f"{yt} + 22"), f"' font-size='14' fill='{SUAVE}' font-family='{FRASE}'>",
+        f("[@n]", "#,0"), " pontos</text>",
+        f"<rect x='{bx}' y='", c(f"{yt} - 14"), "' width='", c(f"[@e] / topo * {bl}"),
+        f"' height='24' rx='4' fill='{AMBAR}'/>",
+        "<text x='", c(f"{bx + 10} + [@e] / topo * {bl}"), "' y='", c(f"{yt} + 6"),
+        f"' font-size='20' font-weight='700' fill='{AMBAR}'>+", f("[@e]", "0.00"), "</text>")
+    xr = f"{bx} + rede / topo * {bl}"
+    fim = h - rodape
+    corpo = junta(
+        D(f'CONCATENATEX ( t, VAR y = ( [o] - 1 ) * {rh:.2f} RETURN {item}, "", [o], ASC )'),
+        "<line x1='", c(xr), "' x2='", c(xr), f"' y1='4' y2='{fim - 4}' stroke='{TEXTO}' stroke-opacity='.75' "
+        "stroke-width='2' stroke-dasharray='6 5'/>",
+        "<text x='", c(xr), f"' y='{fim + 16}' font-size='14' fill='{SUAVE}' text-anchor='middle' "
+        f"font-family='{FRASE}'>todos: +", f("rede", "0.00"), "</text>",
+        texto(0, h - 4, "A irregularidade vem da linha: o ponto só junta as linhas que passam nele.", 15, APAGADO, 400,
+              fonte=FRASE))
+    linhas = ",\n        ".join(f"{{ {lit(rot)}, {lo}, {hi}, {i} }}" for i, (rot, lo, hi) in enumerate(FAIXAS_LINHAS, 1))
+    na_faixa = ("VAR _lo = [lo] VAR _hi = [hi] RETURN CALCULATE ( {m}, FILTER ( ALL ( fato_paradas[linhas] ), "
+                "fato_paradas[linhas] >= _lo && fato_paradas[linhas] <= _hi ) )")
+    return (f'VAR faixas = DATATABLE ( "rot", STRING, "lo", INTEGER, "hi", INTEGER, "o", INTEGER, {{\n        {linhas} }} )\n'
+            f'VAR t = FILTER ( ADDCOLUMNS ( faixas, "@e", {na_faixa.format(m="[Ponto · espera extra]")},\n'
+            f'        "@n", {na_faixa.format(m="DISTINCTCOUNT ( fato_paradas[stop_id] )")} ), NOT ISBLANK ( [@e] ) )\n'
+            "VAR rede = [Ponto · espera extra]\n"
+            "VAR topo = MAX ( MAXX ( t, [@e] ), rede ) * 1.18\n"
+            f"RETURN\n    IF ( COUNTROWS ( t ) = 0, {vazio(w, h)},\n    {svg(w, h, corpo)} )")
+
+
+def html_porque_dias(w: int, h: int) -> str:
+    """Espera extra por tipo de dia (ignora o filtro de tipo de dia) e a parte das horas de servico."""
+    rh = (h - 20) / 3
+    bx, bl, xh = 250, w - 250 - 300, w
+    yt = f"y + {rh / 2 + 7:.1f}"
+    item = junta(
+        "<text x='0' y='", c(yt), f"' font-size='19' font-weight='600' fill='{TEXTO}' font-family='{FRASE}'>",
+        D("dim_tipo_dia[tipo]"), "</text>",
+        f"<rect x='{bx}' y='", c(f"y + {rh / 2 - 11:.1f}"), "' width='", c(f"[@e] / topo * {bl}"),
+        f"' height='22' rx='4' fill='{AMBAR}'/>",
+        "<text x='", c(f"{bx + 10} + [@e] / topo * {bl}"), "' y='", c(yt),
+        f"' font-size='20' font-weight='700' fill='{AMBAR}'>+", f("[@e]", "0.00"), "</text>",
+        f"<text x='{xh}' y='", c(yt), f"' font-size='17' fill='{SUAVE}' text-anchor='end' font-family='{FRASE}'>"
+        f"<tspan font-weight='700' fill='{TEXTO}'>", f("DIVIDE ( [@h], htot )", "0.0%"), "</tspan> das horas · ",
+        f"<tspan font-weight='700' fill='{VERMELHO}'>", f("[@c]", "0%"), "</tspan> colados</text>")
+    xr = f"{bx} + rede / topo * {bl}"
+    corpo = junta(
+        D(f'CONCATENATEX ( t, VAR y = ( dim_tipo_dia[ordem] - 1 ) * {rh:.2f} RETURN {item}, "", dim_tipo_dia[ordem], ASC )'),
+        "<line x1='", c(xr), "' x2='", c(xr), f"' y1='2' y2='{h - 22}' stroke='{TEXTO}' stroke-opacity='.75' "
+        "stroke-width='2' stroke-dasharray='6 5'/>",
+        "<text x='", c(xr), f"' y='{h - 2}' font-size='14' fill='{SUAVE}' text-anchor='middle' "
+        f"font-family='{FRASE}'>todos os dias: +", f("rede", "0.00"), "</text>")
+    return ('VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_tipo_dia[tipo], dim_tipo_dia[ordem] ), "@e", [Espera extra],\n'
+            '        "@c", [Colados], "@h", [Horas de serviço] ), NOT ISBLANK ( [@e] ) )\n'
+            "VAR htot = SUMX ( t, [@h] )\n"
+            "VAR rede = CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_tipo_dia ) )\n"
+            "VAR topo = MAX ( MAXX ( t, [@e] ), rede ) * 1.18\n"
+            f"RETURN\n    IF ( COUNTROWS ( t ) = 0, {vazio(w, h)},\n    {svg(w, h, corpo)} )")
+
+
+LEITURAS = [("Controlar o espaçamento, não só a frota", "Mais ônibus numa linha irregular não a deixa regular."),
+            ("Agir linha a linha, não ponto a ponto", "Ponto com muitas linhas não espera mais que os outros."),
+            ("Ver o fim de semana à parte", "Roda pouca linha frequente: pesa pouco na média da rede.")]
+
+
+def html_porque_leitura(w: int, h: int) -> str:
+    """Tres leituras fixas do que a pagina mostra (texto, sem numero calculado)."""
+    rh = h / len(LEITURAS)
+    partes = []
+    for i, (titulo, frase) in enumerate(LEITURAS):
+        y = round(i * rh)
+        partes += [f"<circle cx='14' cy='{y + 22}' r='14' fill='{VERDE}' fill-opacity='.16' stroke='{VERDE}'/>",
+                   texto(14, y + 28, str(i + 1), 16, VERDE, 700, "middle"),
+                   texto(42, y + 28, titulo, 19, TEXTO, 600, fonte=FRASE),
+                   texto(42, y + 54, frase, 16, SUAVE, 400, fonte=FRASE)]
+    return svg(w, h, junta(*partes))
+
+
 # ---------------------------------------------------------------------------
 # Registro: (pagina, painel) -> (medida, funcao, doc). O relatorio poe o visual na area do painel.
 # ---------------------------------------------------------------------------
@@ -1333,6 +1483,12 @@ PAINEIS = {
     ("simulador", "ganho"): ("HTML simulador linhas", html_ganho, "Linhas com maior parte do ganho."),
     ("ficha", "ffaixa"): ("HTML ficha faixa", html_faixa, "Espera regular e extra por faixa, da linha escolhida."),
     ("ficha", "fdia"): ("HTML ficha dia", html_dia, "Espera extra por dia da linha escolhida, com eventos."),
+    ("porque", "plinhas"): ("HTML o que pesa linhas", html_porque_linhas,
+                            "Intervalo e colados contra espera extra por linha, com a correlacao."),
+    ("porque", "ppontos"): ("HTML o que pesa pontos", html_porque_pontos,
+                            "Espera extra nos pontos pelo numero de linhas."),
+    ("porque", "pdias"): ("HTML o que pesa dias", html_porque_dias, "Espera extra por tipo de dia."),
+    ("porque", "pleitura"): ("HTML o que pesa leitura", html_porque_leitura, "Tres leituras do que a pagina mostra."),
     ("acoes", "rotas"): ("HTML onde agir rotas", html_rotas, "Espera extra por grupo de trajeto e as linhas do grupo."),
     ("acoes", "operacao"): ("HTML onde agir operação", html_operacao, "Cinco ajustes na circulacao, com o numero."),
     ("acoes", "corredores"): ("HTML onde agir corredores", html_corredores, "Avenidas de maior espera extra nos pontos."),
