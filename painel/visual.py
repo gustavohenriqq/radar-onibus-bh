@@ -90,9 +90,38 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 .st-key-nav button {{ border-radius: 10px !important; border: 1px solid var(--borda) !important;
                       background: rgba(255,255,255,.02) !important; color: var(--suave) !important;
                       font-weight: 600; font-size: .86rem; min-height: 2rem; padding: .15rem .55rem !important; }}
+.st-key-nav [data-testid="stButtonGroup"] > div {{ display: grid !important;
+    grid-template-columns: repeat(11, minmax(0, 1fr)); gap: .4rem; }}
+.st-key-nav button {{ width: 100%; flex-direction: column; gap: .1rem; padding: .35rem .2rem !important;
+                      font-size: .78rem !important; line-height: 1.15; white-space: nowrap; overflow: hidden; }}
+.st-key-nav button > div, .st-key-nav button > div > span {{ display: flex; flex-direction: column; align-items: center; gap: .1rem; width: 100%;
+                            min-width: 0; }}
+.st-key-nav button > div > span > span {{ max-width: 100%; min-width: 0; margin: 0 !important; }}
+.st-key-nav button p {{ font-size: .78rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.st-key-nav button [data-testid="stIconMaterial"] {{ font-size: 1.15rem; }}
+@media (max-width: 1100px) {{ .st-key-nav [data-testid="stButtonGroup"] > div {{
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }} }}
 .st-key-nav button:hover {{ border-color: var(--ambar) !important; color: var(--texto) !important; }}
 .st-key-nav button[kind="pillsActive"], .st-key-nav button[data-testid="stBaseButton-pillsActive"] {{
     background: rgba(255,179,71,.14) !important; border-color: var(--ambar) !important; color: var(--ambar) !important; }}
+
+/* menu lateral */
+[data-testid="stSidebar"] {{ background: #0C1122; border-right: 1px solid var(--borda); min-width: 236px !important;
+                             max-width: 236px !important; }}
+.menu-tit {{ color: var(--ambar); font-size: .7rem; font-weight: 800; letter-spacing: .2em; margin: .2rem 0 .6rem .3rem; }}
+[data-testid="stSidebar"] [role="radiogroup"] {{ gap: .25rem; width: 100%; }}
+[data-testid="stSidebar"] [role="radiogroup"] label {{ width: 100%; margin: 0; padding: .65rem .8rem; border-radius: 10px;
+    border: 1px solid transparent; border-left: 3px solid transparent; cursor: pointer; transition: background .15s; }}
+[data-testid="stSidebar"] [role="radiogroup"] label > div > div:first-child {{ display: none; }}
+[data-testid="stSidebar"] [data-testid="stRadio"], [data-testid="stSidebar"] [data-testid="stRadio"] > div,
+[data-testid="stSidebar"] [data-testid="stElementContainer"] {{ width: 100% !important; }}
+[data-testid="stSidebar"] [role="radiogroup"] label p {{ color: var(--suave); font-size: .98rem; font-weight: 600; }}
+[data-testid="stSidebar"] [role="radiogroup"] label [data-testid="stIconMaterial"] {{ font-size: 1.25rem; margin-right: .35rem;
+    vertical-align: -4px; }}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover {{ background: rgba(255,255,255,.04); }}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{ background: rgba(255,179,71,.12);
+    border-color: rgba(255,179,71,.3); border-left-color: var(--ambar); }}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p {{ color: var(--ambar); }}
 
 /* paineis numerados */
 [class*="st-key-pn_"] {{ --acc: var(--ambar); position: relative; border-radius: 18px; padding: 1.25rem 1.4rem 1.1rem;
@@ -113,9 +142,9 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 
 /* azulejos: numero grande com rotulo */
 .az {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--min, 160px), 1fr)); gap: .8rem; }}
-.az .a {{ border-radius: 14px; padding: .9rem 1rem .85rem; background: var(--painel2); border: 1px solid var(--borda); }}
+.az .a {{ min-width: 0; border-radius: 14px; padding: .9rem .9rem .85rem; background: var(--painel2); border: 1px solid var(--borda); }}
 .az .r {{ color: var(--suave); font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }}
-.az .v {{ color: var(--c); font-size: 2.9rem; font-weight: 700; font-stretch: 70%; line-height: 1.05;
+.az .v {{ white-space: nowrap; color: var(--c); font-size: clamp(1.8rem, 6.2cqi, 2.9rem); font-weight: 700; font-stretch: 70%; line-height: 1.05;
           font-variant-numeric: tabular-nums; margin: .15rem 0 .1rem; }}
 .az .v small {{ font-size: .45em; font-stretch: 85%; margin-left: .12em; }}
 .az .n {{ color: var(--suave); font-size: .86rem; line-height: 1.35; }}
@@ -133,7 +162,10 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 .lista .lin:last-child {{ border-bottom: 0; }}
 .lista .k {{ color: var(--apagado); font-weight: 700; font-stretch: 75%; font-size: 1.05rem; }}
 .lista .cod {{ color: var(--texto); font-weight: 800; font-size: 1.02rem; font-variant-numeric: tabular-nums; }}
-.lista .nome {{ display: block; color: var(--suave); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.lista .nome {{ display: block; color: var(--suave); font-size: .86rem; line-height: 1.25; overflow-wrap: anywhere; }}
+.lista span.nome {{ display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+                font-size: .86rem; line-height: 1.25; overflow: hidden; overflow-wrap: anywhere; }}
+.lista .lin2 b {{ display: block; color: var(--texto); font-weight: 800; font-size: 1rem; }}
 .lista .nome b {{ display: block; color: var(--texto); font-size: 1rem; font-weight: 600; }}
 .lista .nome small {{ display: block; color: var(--apagado); font-size: .8rem; }}
 .lista .num {{ text-align: right; font-weight: 800; font-stretch: 80%; font-size: 1.12rem; font-variant-numeric: tabular-nums; }}
@@ -341,7 +373,7 @@ def azulejos(itens, cols: int = 2) -> str:
         v = f"{n}<small>{u}</small>" if u else n
         partes.append(f'<div class="a" style="--c:{cor}"><div class="r">{rot}</div><div class="v">{v}</div>'
                       f'<div class="n">{nota}</div></div>')
-    return f'<div class="az" style="--min:{150 if cols >= 4 else 200}px">' + "".join(partes) + "</div>"
+    return f'<div class="az" style="--min:{100 if cols >= 4 else 200}px">' + "".join(partes) + "</div>"
 
 
 def barra(v: float, topo: float, texto_: str, cor: str = AMBAR, ref: float | None = None) -> str:
