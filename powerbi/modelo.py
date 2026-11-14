@@ -28,7 +28,7 @@ VERMELHO = "#FF6B6B"  # piora, colados, o pior
 ESCALA = [(0.5, "#18203A"), (1.0, "#1F2B47"), (1.5, "#2E3550"), (2.0, "#4A3F4F"), (2.5, "#6E4A45"),
           (3.0, "#94563A"), (3.5, "#B9652F"), (4.5, "#DE7A2C"), (6.0, "#F59A33"), (None, "#FFC15A")]
 
-HORAS_MIN_PARADA = 25  # o mesmo corte do painel (painel/app.py)
+HORAS_MIN_PARADA = 25  # o mesmo corte do painel web (painel/paginas.py)
 TOP_CALOR = 30  # linhas no mapa de calor linha x faixa
 # Faixas horarias da Gold (gold/seeds/faixa_horaria.csv): codigo, nome e horas, na ordem do dia
 FAIXAS = [("madrugada", "Madrugada", "0h às 5h"), ("inicio_manha", "Início da manhã", "5h às 6h"),
@@ -174,8 +174,8 @@ in
 # Tabelas calculadas (dimensoes e seletores)
 # ---------------------------------------------------------------------------
 def eventos_do_painel() -> tuple[dict, dict]:
-    """EVENTOS e FALHA_S de painel/app.py, lidos sem importar o Streamlit."""
-    arvore = ast.parse((RAIZ / "painel" / "app.py").read_text(encoding="utf-8"))
+    """EVENTOS e FALHA_S de painel/eventos.py, lidos sem importar o painel."""
+    arvore = ast.parse((RAIZ / "painel" / "eventos.py").read_text(encoding="utf-8"))
     achados = {}
     for no in arvore.body:
         if isinstance(no, ast.Assign) and len(no.targets) == 1 and isinstance(no.targets[0], ast.Name):
@@ -254,7 +254,7 @@ RETURN
         [("data", "dateTime", "dd/mm/yyyy"), ("rotulo", "string", None), ("dia_semana", "string", None),
          ("dia_semana_ordem", "int64", "0"), ("semana", "dateTime", "dd/mm/yyyy"), ("semana_rotulo", "string", None),
          ("evento", "string", None), ("falha_gps_s", "boolean", None)]),
-    "eventos": ("Eventos na cidade e dias com falha de GPS nas linhas suplementares (copiados de painel/app.py).",
+    "eventos": ("Eventos na cidade e dias com falha de GPS nas linhas suplementares (copiados de painel/eventos.py).",
                 None, [("data", "dateTime", "dd/mm/yyyy"), ("evento", "string", None), ("evento_l1", "string", None),
                        ("evento_l2", "string", None), ("evento_l3", "string", None), ("evento_n", "int64", "0"),
                        ("falha_gps_s", "boolean", None)]),

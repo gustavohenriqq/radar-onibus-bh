@@ -62,3 +62,36 @@ def test_formato_brasileiro():
     assert pct(0.12345) == "12,3%"
     assert br(None) == "sem dado" and pct(float("nan")) == "sem dado" and br(np.float64("nan")) == "sem dado"
     assert data_br(date(2026, 11, 9)) == "09/11/2026"
+
+
+def test_sql_somas_recusa_chave_fora_da_lista_e_agrupa_dia_da_semana():
+    from painel.consultas import sql_somas
+    with pytest.raises(ValueError):
+        sql_somas(["stop_name; drop table x"], "true")
+    sql = sql_somas(["route_id", "dia_semana"], "true")
+    assert "extract(isodow from data_bh)::int as dia_semana" in sql
+    assert sql.endswith("group by route_id, extract(isodow from data_bh)::int")
+
+
+def test_metricas_em_pandas_repetem_as_formulas_do_sql():
+    import pandas as pd
+    from painel.consultas import SOMAS, agrega, total
+    df = pd.DataFrame([dict(zip(SOMAS, v)) | {"k": k} for k, v in [
+        ("a", [1, 10, 6000, 4.2e5, 1.8e5, 2, 1, 4e4, 1, 0, 1, 900]),
+        ("b", [2, 30, 18000, 1.5e6, 9.0e5, 3, 0, 2e5, 2, 1, 0, 3000])]])
+    t = total(df)
+    assert t["excesso_min"] == pytest.approx((1.8e5 + 9.0e5) / 2 / 24000 / 60)
+    assert t["regular_min"] == pytest.approx((4.2e5 + 1.5e6) / 2 / 24000 / 60)
+    assert t["colados_pct"] == pytest.approx(5 / 40)
+    assert t["reducao_pct"] == pytest.approx(2.4e5 / 1.08e6)
+    assert t["comboio_pct"] == pytest.approx(1 / 5)
+    por = agrega(df, ["k"]).set_index("k")
+    assert por.loc["a", "volume_min_h"] == pytest.approx(1.8e5 / 2 / 60 / 3600)
+
+
+def test_trajeto_pelo_nome_igual_ao_power_bi():
+    from painel.paginas import trajeto
+    assert trajeto("Estação Diamante/Centro") == "Da estação ao centro"
+    assert trajeto("Taquaril / HOSPITAIS") == "Do bairro ao centro"
+    assert trajeto("Belvedere / Floresta") == "Entre bairros"
+    assert trajeto("Estação Barreiro / Tirol") == "Do bairro à estação"

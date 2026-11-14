@@ -1,4 +1,4 @@
-/// Eventos na cidade e dias com falha de GPS nas linhas suplementares (copiados de painel/app.py).
+/// Eventos na cidade e dias com falha de GPS nas linhas suplementares (copiados de painel/eventos.py).
 table eventos
 	lineageTag: 1db0b9bb-62d2-5638-9ee9-860ed3a576a9
 

@@ -1,14 +1,14 @@
 [theme]
 base = "dark"
-primaryColor = "#6FC1D3"
-backgroundColor = "#070B1A"
-secondaryBackgroundColor = "#0F1733"
-textColor = "#E4E8F2"
-borderColor = "#1F2B57"
+primaryColor = "#FFB347"
+backgroundColor = "#0A0E1C"
+secondaryBackgroundColor = "#182038"
+textColor = "#F4F6FB"
+borderColor = "#2A3456"
 baseRadius = "0.6rem"
 font = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"
 headingFont = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"
-dataframeHeaderBackgroundColor = "#141E42"
+dataframeHeaderBackgroundColor = "#182038"
 
 [server]
 headless = true
