@@ -1,0 +1,228 @@
+/// Somas por ponto nos ultimos 28 dias. Sem linha: nao segue o filtro de linha nem o de periodo.
+table fato_paradas
+	lineageTag: b3bfa305-666a-56bc-be16-bd9f53190ded
+
+	column stop_id
+		dataType: string
+		lineageTag: 7422835e-6e4e-54b9-b66a-049c9a8f9912
+		summarizeBy: none
+		sourceColumn: stop_id
+
+		annotation SummarizationSetBy = User
+
+	column tipo_dia
+		dataType: string
+		lineageTag: 7576207c-988b-5a1c-b469-0c2c44d218a1
+		summarizeBy: none
+		sourceColumn: tipo_dia
+
+		annotation SummarizationSetBy = User
+
+	column alta_frequencia
+		dataType: boolean
+		isHidden
+		lineageTag: 36b7ae4a-1664-5c5d-8f32-2d9eace9dddf
+		summarizeBy: none
+		sourceColumn: alta_frequencia
+
+		annotation SummarizationSetBy = User
+
+	column grupos
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: dba15fd5-0f8f-5c4c-81cd-2a4551f97bbe
+		summarizeBy: none
+		sourceColumn: grupos
+
+		annotation SummarizationSetBy = User
+
+	column n
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 1b782ee0-f1e9-532b-88fb-3181d0f510c6
+		summarizeBy: none
+		sourceColumn: n
+
+		annotation SummarizationSetBy = User
+
+	column soma
+		dataType: double
+		formatString: 0.00
+		isHidden
+		lineageTag: 17b56fee-f303-5e66-9784-741b83268cdd
+		summarizeBy: none
+		sourceColumn: soma
+
+		annotation SummarizationSetBy = User
+
+	column soma2_n
+		dataType: double
+		formatString: 0.00
+		isHidden
+		lineageTag: ee777384-0ce9-52d4-aba1-927350f91065
+		summarizeBy: none
+		sourceColumn: soma2_n
+
+		annotation SummarizationSetBy = User
+
+	column dev2
+		dataType: double
+		formatString: 0.00
+		isHidden
+		lineageTag: b5ec978e-d31d-5f40-9424-289a22678739
+		summarizeBy: none
+		sourceColumn: dev2
+
+		annotation SummarizationSetBy = User
+
+	column colados
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: e68fdd60-1b3f-51e0-8cfe-e53e8be36600
+		summarizeBy: none
+		sourceColumn: colados
+
+		annotation SummarizationSetBy = User
+
+	column abaixo_60s
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 1087ff80-f0a0-534e-b30f-94d41f7b3d86
+		summarizeBy: none
+		sourceColumn: abaixo_60s
+
+		annotation SummarizationSetBy = User
+
+	column reducao
+		dataType: double
+		formatString: 0.00
+		isHidden
+		lineageTag: 156b8098-6fc8-580b-8642-081eb650a8ad
+		summarizeBy: none
+		sourceColumn: reducao
+
+		annotation SummarizationSetBy = User
+
+	column pares
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 52d1cefd-09a3-5525-99ae-9ac9170091dd
+		summarizeBy: none
+		sourceColumn: pares
+
+		annotation SummarizationSetBy = User
+
+	column pulo_primeiro
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 41bfd4d6-8565-5445-97e6-925d2cb8eab4
+		summarizeBy: none
+		sourceColumn: pulo_primeiro
+
+		annotation SummarizationSetBy = User
+
+	column pulo_colado
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: aa6d9f24-976c-5163-bd86-d0dc21e233de
+		summarizeBy: none
+		sourceColumn: pulo_colado
+
+		annotation SummarizationSetBy = User
+
+	column var_n
+		dataType: double
+		formatString: 0.00
+		isHidden
+		lineageTag: 03103e36-ce74-58fa-bb23-bb9cce2e282e
+		summarizeBy: none
+		sourceColumn: var_n
+
+		annotation SummarizationSetBy = User
+
+	column linhas
+		dataType: int64
+		formatString: 0
+		lineageTag: 615cf0b6-d2aa-51ca-b6ba-e0f4cf6dc7e4
+		summarizeBy: none
+		sourceColumn: linhas
+
+		annotation SummarizationSetBy = User
+
+	column stop_name
+		dataType: string
+		lineageTag: e78553f1-21f4-588c-8788-50f24abe4f67
+		summarizeBy: none
+		sourceColumn: stop_name
+
+		annotation SummarizationSetBy = User
+
+	column stop_lat
+		dataType: double
+		formatString: 0.00
+		lineageTag: 803c22a5-ced4-5806-93f1-71a8c5c3f15a
+		summarizeBy: none
+		sourceColumn: stop_lat
+
+		annotation SummarizationSetBy = User
+
+	column stop_lon
+		dataType: double
+		formatString: 0.00
+		lineageTag: 7e0903ef-ed5d-5417-8a97-09198e3a0b59
+		summarizeBy: none
+		sourceColumn: stop_lon
+
+		annotation SummarizationSetBy = User
+
+	column janela_ini
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: e9d8e354-17cf-5a3e-bd0f-6c6ebb932ccd
+		summarizeBy: none
+		sourceColumn: janela_ini
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column janela_fim
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 534f982a-75df-59f4-8b0c-2c2d37afc68f
+		summarizeBy: none
+		sourceColumn: janela_fim
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column frequencia
+		dataType: string
+		lineageTag: ea958114-4cb4-5f7b-96e1-df3bef6d068a
+		summarizeBy: none
+		sourceColumn: frequencia
+
+		annotation SummarizationSetBy = User
+
+	partition fato_paradas = m
+		mode: import
+		source =
+				let
+				    Fonte = PostgreSQL.Database(ServidorPostgres, BancoPostgres),
+				    Tabela = Fonte{[Schema = "radar", Item = "paradas_28d"]}[Data],
+				    Selecao = Table.SelectColumns(Tabela, {"stop_id", "tipo_dia", "alta_frequencia", "grupos", "n", "soma", "soma2_n", "dev2", "colados", "abaixo_60s", "reducao", "pares", "pulo_primeiro", "pulo_colado", "var_n", "linhas", "stop_name", "stop_lat", "stop_lon", "janela_ini", "janela_fim"}),
+				    Colunas = Table.TransformColumnTypes(Selecao, {{"stop_id", type text}, {"tipo_dia", type text}, {"alta_frequencia", type logical}, {"grupos", Int64.Type}, {"n", Int64.Type}, {"soma", type number}, {"soma2_n", type number}, {"dev2", type number}, {"colados", Int64.Type}, {"abaixo_60s", Int64.Type}, {"reducao", type number}, {"pares", Int64.Type}, {"pulo_primeiro", Int64.Type}, {"pulo_colado", Int64.Type}, {"var_n", type number}, {"linhas", Int64.Type}, {"stop_name", type text}, {"stop_lat", type number}, {"stop_lon", type number}, {"janela_ini", type date}, {"janela_fim", type date}}),
+				    Freq = Table.AddColumn(Colunas, "frequencia", each if [alta_frequencia] then "alta" else "baixa", type text),
+				    Pronto = Freq
+				in
+				    Pronto
+
+	annotation PBI_ResultType = Table

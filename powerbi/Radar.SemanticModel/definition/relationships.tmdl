@@ -1,0 +1,60 @@
+relationship 3c19f4e3-7db3-5c88-a7d4-c206af57bea7
+	fromColumn: fato_linha.data_bh
+	toColumn: dim_data.data
+
+relationship 2efb5d94-8744-5d38-a503-866514452f05
+	fromColumn: fato_linha.route_id
+	toColumn: dim_linha.route_id
+
+relationship bf7cf6f8-97b3-5275-acbf-068fa1770a01
+	fromColumn: fato_linha.faixa_horaria
+	toColumn: dim_faixa.faixa_horaria
+
+relationship b6062bce-31eb-598d-b86e-10a806b11337
+	fromColumn: fato_linha.tipo_dia
+	toColumn: dim_tipo_dia.tipo_dia
+
+relationship 9ef7c845-1584-5230-945e-58f6ac32484f
+	fromColumn: fato_linha.frequencia
+	toColumn: dim_frequencia.frequencia
+
+relationship b6b94bff-4dd3-5606-a873-a30aa24f1786
+	fromColumn: fato_hist.data_bh
+	toColumn: dim_data.data
+
+relationship 783dfa7d-fbcd-5c0c-a791-2fa690ff022b
+	fromColumn: fato_hist.tipo_dia
+	toColumn: dim_tipo_dia.tipo_dia
+
+relationship 2e97f862-098f-5d02-aee2-fdf5f35112d1
+	fromColumn: fato_hist.frequencia
+	toColumn: dim_frequencia.frequencia
+
+relationship 90683fd1-c241-5fab-8f15-a77d6e1b68e0
+	fromColumn: fato_hist.classe
+	toColumn: dim_classe.classe
+
+relationship e97c07d6-6e49-56c9-a4fc-4af6a2fe842a
+	fromColumn: fato_paradas.tipo_dia
+	toColumn: dim_tipo_dia.tipo_dia
+
+relationship 0b0e28af-523d-5886-b68d-35f3b6d11205
+	fromColumn: fato_paradas.frequencia
+	toColumn: dim_frequencia.frequencia
+
+relationship e22d8e3a-bb80-57ef-9746-8c71a5177696
+	fromColumn: fato_qualidade.data_bh
+	toColumn: dim_data.data
+
+relationship 57ab07fa-e192-5d2b-9d9d-d7ca39dd6503
+	fromColumn: fato_previsao.data_bh
+	toColumn: dim_data.data
+
+relationship c34b0517-6016-5053-8d29-2e9790738377
+	fromColumn: fato_previsao.route_id
+	toColumn: dim_linha.route_id
+
+relationship 65afde82-f57f-56b8-9ca8-1fe2bc4eaef2
+	crossFilteringBehavior: bothDirections
+	fromColumn: sel_periodo.data
+	toColumn: dim_data.data

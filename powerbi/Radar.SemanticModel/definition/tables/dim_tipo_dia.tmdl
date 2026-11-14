@@ -1,0 +1,38 @@
+/// Tipo de dia: util, sabado, domingo e feriado.
+table dim_tipo_dia
+	lineageTag: 70d2d15e-16f4-5121-9c0c-f8f8d2c57520
+
+	column tipo_dia
+		dataType: string
+		lineageTag: 8436af2d-5708-52ad-b4e7-f95a5fa3f1c1
+		summarizeBy: none
+		sourceColumn: [tipo_dia]
+
+		annotation SummarizationSetBy = User
+
+	column tipo
+		dataType: string
+		lineageTag: ec541cbb-d61a-56af-886c-2b90aa244c6d
+		summarizeBy: none
+		sourceColumn: [tipo]
+		sortByColumn: ordem
+
+		annotation SummarizationSetBy = User
+
+	column ordem
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 4f08a682-ff33-508a-857a-801bd836e845
+		summarizeBy: none
+		sourceColumn: [ordem]
+
+		annotation SummarizationSetBy = User
+
+	partition dim_tipo_dia = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "tipo_dia", STRING, "tipo", STRING, "ordem", INTEGER,
+				    { { "dia_util", "Dia útil", 1 }, { "sabado", "Sábado", 2 }, { "domingo_feriado", "Domingo e feriado", 3 } }
+				)

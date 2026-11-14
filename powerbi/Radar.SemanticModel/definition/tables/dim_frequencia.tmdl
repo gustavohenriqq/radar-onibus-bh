@@ -1,0 +1,38 @@
+/// Alta frequencia: intervalo medio de ate 15 min na linha, sentido, dia e faixa.
+table dim_frequencia
+	lineageTag: 6671156a-d24e-50a8-8ff4-fd4e607ad619
+
+	column frequencia
+		dataType: string
+		lineageTag: f58dd2f2-24b1-5a90-b3ac-710c72f47e4e
+		summarizeBy: none
+		sourceColumn: [frequencia]
+
+		annotation SummarizationSetBy = User
+
+	column frequencia_rotulo
+		dataType: string
+		lineageTag: 3f3142dd-df4e-5a43-be54-ead7293c97b5
+		summarizeBy: none
+		sourceColumn: [frequencia_rotulo]
+		sortByColumn: ordem
+
+		annotation SummarizationSetBy = User
+
+	column ordem
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 6e931f6d-8c60-589a-a36e-b59704dadb41
+		summarizeBy: none
+		sourceColumn: [ordem]
+
+		annotation SummarizationSetBy = User
+
+	partition dim_frequencia = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "frequencia", STRING, "frequencia_rotulo", STRING, "ordem", INTEGER,
+				    { { "alta", "Alta (até 15 min)", 1 }, { "baixa", "Baixa", 2 } }
+				)

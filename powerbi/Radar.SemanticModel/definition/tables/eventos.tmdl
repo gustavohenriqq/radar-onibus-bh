@@ -1,0 +1,86 @@
+/// Eventos na cidade e dias com falha de GPS nas linhas suplementares (copiados de painel/app.py).
+table eventos
+	lineageTag: 1db0b9bb-62d2-5638-9ee9-860ed3a576a9
+
+	column data
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 17b6e68f-7395-50f9-b665-335b8d08b23f
+		summarizeBy: none
+		sourceColumn: [data]
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column evento
+		dataType: string
+		lineageTag: 84d31e22-fff4-52b7-82e2-9acb0b68276d
+		summarizeBy: none
+		sourceColumn: [evento]
+
+		annotation SummarizationSetBy = User
+
+	column evento_l1
+		dataType: string
+		lineageTag: af56984b-94bf-5579-b602-38d4748d31d2
+		summarizeBy: none
+		sourceColumn: [evento_l1]
+
+		annotation SummarizationSetBy = User
+
+	column evento_l2
+		dataType: string
+		lineageTag: 0a8779f2-2812-5055-a978-d0f8cec9b5da
+		summarizeBy: none
+		sourceColumn: [evento_l2]
+
+		annotation SummarizationSetBy = User
+
+	column evento_l3
+		dataType: string
+		lineageTag: c6b9163b-9a7f-5406-be00-4559b3d5fc48
+		summarizeBy: none
+		sourceColumn: [evento_l3]
+
+		annotation SummarizationSetBy = User
+
+	column evento_n
+		dataType: int64
+		formatString: 0
+		lineageTag: c70ea0ae-a281-5704-9b2d-9e2044b93c33
+		summarizeBy: none
+		sourceColumn: [evento_n]
+
+		annotation SummarizationSetBy = User
+
+	column falha_gps_s
+		dataType: boolean
+		lineageTag: 13ed09b1-628b-5939-9739-8aefc65e7175
+		summarizeBy: none
+		sourceColumn: [falha_gps_s]
+
+		annotation SummarizationSetBy = User
+
+	partition eventos = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "data", DATETIME, "evento", STRING, "evento_l1", STRING, "evento_l2", STRING, "evento_l3", STRING, "evento_n", INTEGER, "falha_gps_s", BOOLEAN,
+				    {
+				        { "2026-10-04", "Eleição, 1º turno: ônibus de graça e 4 mil viagens extras", "Eleição, 1º turno: ônibus de graça e 4", "mil viagens extras", "", 2, FALSE },
+				        { "2026-10-05", "Chuva forte de manhã, quase 50 mm", "Chuva forte de manhã, quase 50 mm", "", "", 1, FALSE },
+				        { "2026-10-13", "Recesso escolar da rede municipal (13 a 16/10)", "Recesso escolar da rede municipal (13 a", "16/10)", "", 2, FALSE },
+				        { "2026-10-14", "Recesso escolar da rede municipal (13 a 16/10)", "Recesso escolar da rede municipal (13 a", "16/10)", "", 2, FALSE },
+				        { "2026-10-15", "Recesso escolar da rede municipal (13 a 16/10)", "Recesso escolar da rede municipal (13 a", "16/10)", "", 2, FALSE },
+				        { "2026-10-16", "Recesso escolar da rede municipal (13 a 16/10)", "Recesso escolar da rede municipal (13 a", "16/10)", "", 2, TRUE },
+				        { "2026-10-19", "", "", "", "", 0, TRUE },
+				        { "2026-10-20", "Itinerário novo da linha 5033", "Itinerário novo da linha 5033", "", "", 1, TRUE },
+				        { "2026-10-21", "Ato de campanha no Centro (15h às 17h) e obra muda o trânsito da Cristiano Machado", "Ato de campanha no Centro (15h às 17h) e", "obra muda o trânsito da Cristiano", "Machado", 3, TRUE },
+				        { "2026-10-22", "", "", "", "", 0, TRUE },
+				        { "2026-10-23", "", "", "", "", 0, TRUE },
+				        { "2026-10-25", "Eleição, 2º turno, com 4 mil viagens extras; temporal à tarde derruba árvores e semáforos", "Eleição, 2º turno, com 4 mil viagens", "extras; temporal à tarde derruba árvores", "e semáforos", 3, FALSE },
+				        { "2026-10-26", "Depois do temporal: 45 mil imóveis sem luz de manhã e árvores caídas em vias", "Depois do temporal: 45 mil imóveis sem", "luz de manhã e árvores caídas em vias", "", 2, FALSE },
+				        { "2026-10-29", "", "", "", "", 0, TRUE }
+				    }
+				)

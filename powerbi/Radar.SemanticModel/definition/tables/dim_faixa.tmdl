@@ -1,0 +1,53 @@
+/// Faixas horarias da Gold (gold/seeds/faixa_horaria.csv), com nome e horas.
+table dim_faixa
+	lineageTag: 8294fa14-ea72-5e5b-8929-ff19de80d8d5
+
+	column faixa_horaria
+		dataType: string
+		lineageTag: 425fbbbb-a442-5436-9fe5-21328a5da177
+		summarizeBy: none
+		sourceColumn: [faixa_horaria]
+
+		annotation SummarizationSetBy = User
+
+	column faixa
+		dataType: string
+		lineageTag: ec85e62d-23ea-5978-803d-1d825f39a72a
+		summarizeBy: none
+		sourceColumn: [faixa]
+		sortByColumn: ordem
+
+		annotation SummarizationSetBy = User
+
+	column horas
+		dataType: string
+		lineageTag: cccde0f2-5049-5ee4-88de-a77ef1d0fceb
+		summarizeBy: none
+		sourceColumn: [horas]
+
+		annotation SummarizationSetBy = User
+
+	column ordem
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: da9169cc-1cf8-5125-816e-b3105e0028df
+		summarizeBy: none
+		sourceColumn: [ordem]
+
+		annotation SummarizationSetBy = User
+
+	partition dim_faixa = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "faixa_horaria", STRING, "faixa", STRING, "horas", STRING, "ordem", INTEGER,
+				    {
+				        { "madrugada", "Madrugada", "0h às 5h", 1 },
+				        { "inicio_manha", "Início da manhã", "5h às 6h", 2 },
+				        { "pico_manha", "Pico da manhã", "6h às 9h", 3 },
+				        { "entre_picos", "Entre picos", "9h às 16h", 4 },
+				        { "pico_tarde", "Pico da tarde", "16h às 20h", 5 },
+				        { "noite", "Noite", "20h às 24h", 6 }
+				    }
+				)

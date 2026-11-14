@@ -1,0 +1,144 @@
+{
+  "name": "Radar",
+  "dataColors": [
+    "#6AA8FF",
+    "#FFB347",
+    "#FF6B6B",
+    "#42D392",
+    "#C9D0E4",
+    "#9AA3C2",
+    "#5B6BA8",
+    "#C98BB0"
+  ],
+  "foreground": "#F4F6FB",
+  "foregroundNeutralSecondary": "#C9D0E4",
+  "foregroundNeutralTertiary": "#9AA3C2",
+  "background": "#0A0E1C",
+  "backgroundLight": "#111729",
+  "backgroundNeutral": "#182038",
+  "tableAccent": "#FFB347",
+  "good": "#42D392",
+  "bad": "#FF6B6B",
+  "neutral": "#FFB347",
+  "maximum": "#FFB347",
+  "center": "#6AA8FF",
+  "minimum": "#182038",
+  "textClasses": {
+    "callout": {
+      "fontSize": 40,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#F4F6FB"
+    },
+    "title": {
+      "fontSize": 16,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#F4F6FB"
+    },
+    "header": {
+      "fontSize": 13,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#C9D0E4"
+    },
+    "label": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI",
+      "color": "#C9D0E4"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "show": false
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "dropShadow": [
+          {
+            "show": false
+          }
+        ],
+        "visualHeader": [
+          {
+            "show": false
+          }
+        ],
+        "visualTooltip": [
+          {
+            "background": {
+              "solid": {
+                "color": "#182038"
+              }
+            },
+            "titleFontColor": {
+              "solid": {
+                "color": "#C9D0E4"
+              }
+            },
+            "valueFontColor": {
+              "solid": {
+                "color": "#F4F6FB"
+              }
+            },
+            "fontSize": 12
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "background": [
+          {
+            "color": {
+              "solid": {
+                "color": "#0A0E1C"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "outspace": [
+          {
+            "color": {
+              "solid": {
+                "color": "#0A0E1C"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "slicer": {
+      "*": {
+        "items": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#F4F6FB"
+              }
+            },
+            "background": {
+              "solid": {
+                "color": "#182038"
+              }
+            }
+          }
+        ],
+        "dropdown": [
+          {
+            "background": {
+              "solid": {
+                "color": "#182038"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+model Model
+	culture: pt-BR
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pt-BR
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_ProTooling = ["DevMode"]
+
+annotation PBI_QueryOrder = ["ServidorPostgres","BancoPostgres","fato_linha","fato_hist","fato_paradas","fato_qualidade","fato_previsao","dim_linha","cargas"]
+
+ref table fato_linha
+ref table fato_hist
+ref table fato_paradas
+ref table fato_qualidade
+ref table fato_previsao
+ref table dim_linha
+ref table cargas
+ref table eventos
+ref table dim_data
+ref table dim_faixa
+ref table dim_tipo_dia
+ref table dim_frequencia
+ref table dim_classe
+ref table sel_periodo
+ref table sel_espacamento
+ref table _Medidas
+
+ref cultureInfo pt-BR
+

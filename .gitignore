@@ -31,3 +31,12 @@ orquestracao/logs/
 
 # Painel (segredos do Streamlit)
 .streamlit/secrets.toml
+
+# Power BI: estado local do Desktop e HTML intermediario da arte
+powerbi/*/.pbi/
+powerbi/arte/html/
+
+# Copia do Desktop (Salvar como) na raiz: leva o endereco do Neon, o versionado e o powerbi/ gerado
+/Radar.pbip
+/Radar.Report/
+/Radar.SemanticModel/

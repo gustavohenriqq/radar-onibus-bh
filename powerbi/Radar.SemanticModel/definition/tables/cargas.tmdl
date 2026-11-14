@@ -1,0 +1,48 @@
+/// Uma linha por exportacao para o Neon (horario de BH). Diz ate que dia vao os dados.
+table cargas
+	lineageTag: 18a47026-7e75-513c-b7a6-fc0a2de080ad
+
+	column carregado_em
+		dataType: dateTime
+		formatString: dd/mm/yyyy hh:nn
+		lineageTag: c564536d-e3a7-55d1-94bf-4eb0e93ba0d2
+		summarizeBy: none
+		sourceColumn: carregado_em
+
+		annotation SummarizationSetBy = User
+
+	column de
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 0a22fd8f-51f5-5a9a-a4c6-d237b0a18c77
+		summarizeBy: none
+		sourceColumn: de
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column ate
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: ce4bc64a-601e-56e4-b7a7-7f0aafa6dc30
+		summarizeBy: none
+		sourceColumn: ate
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	partition cargas = m
+		mode: import
+		source =
+				let
+				    Fonte = PostgreSQL.Database(ServidorPostgres, BancoPostgres),
+				    Tabela = Fonte{[Schema = "radar", Item = "cargas"]}[Data],
+				    Selecao = Table.SelectColumns(Tabela, {"carregado_em", "de", "ate"}),
+				    Local = Table.TransformColumns(Selecao, {{"carregado_em", each DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_, -3)), type datetime}}),
+				    Colunas = Table.TransformColumnTypes(Local, {{"de", type date}, {"ate", type date}})
+				in
+				    Colunas
+
+	annotation PBI_ResultType = Table

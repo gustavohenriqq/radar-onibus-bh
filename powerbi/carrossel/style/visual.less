@@ -1,0 +1,559 @@
+// Paleta do relatorio (modelo.py)
+@fundo: #0A0E1C;
+@painel: #111729;
+@painel2: #182038;
+@borda: #2A3456;
+@texto: #F4F6FB;
+@suave: #C9D0E4;
+@apagado: #9AA3C2;
+@ambar: #FFB347;
+@azul: #6AA8FF;
+@verde: #42D392;
+@vermelho: #FF6B6B;
+
+@num: "Bahnschrift", "DIN Alternate", "Segoe UI", sans-serif;
+@txt: "Segoe UI", sans-serif;
+@ease: cubic-bezier(.2, .8, .2, 1);
+
+.carrossel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1752px;
+    height: 484px;
+    transform-origin: 0 0;
+    font-family: @txt;
+    color: @texto;
+    outline: none;
+    user-select: none;
+    overflow: hidden;
+    border-radius: 24px;
+}
+
+// Modo foco: sem a arte por baixo, o visual desenha a moldura e o titulo do painel
+.titulo-foco { display: none; }
+.carrossel.foco {
+    background: linear-gradient(180deg, mix(@ambar, @painel, 8%), @painel 110px);
+    border: 1px solid fade(@ambar, 22%);
+    box-sizing: border-box;
+    .titulo-foco { display: block; }
+}
+.tf-num {
+    position: absolute;
+    left: 24px;
+    top: 16px;
+    font-family: @num;
+    font-size: 68px;
+    font-weight: 700;
+    line-height: .85;
+    letter-spacing: -.03em;
+    color: transparent;
+    -webkit-text-stroke: 1.4px @ambar;
+    opacity: .9;
+}
+.tf-olho {
+    position: absolute;
+    left: 96px;
+    top: 18px;
+    color: @ambar;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .16em;
+}
+.tf-tit {
+    position: absolute;
+    left: 96px;
+    top: 38px;
+    color: @texto;
+    font-family: @num;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+// dica e contador no alto, a direita do titulo da arte
+.topo {
+    position: absolute;
+    right: 28px;
+    top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 7px;
+}
+.dica {
+    font-size: 16px;
+    color: @apagado;
+    letter-spacing: .02em;
+}
+.contador {
+    font-family: @num;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    color: @ambar;
+}
+
+// Busca: a esquerda do contador, acima dos cartoes. A lista cai por cima do palco.
+.busca {
+    position: absolute;
+    top: 24px;
+    right: 356px;
+    width: 380px;
+    z-index: 300;
+}
+// Ordem: botoes segmentados a esquerda da busca
+.ordem {
+    position: absolute;
+    top: 24px;
+    right: 752px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 300;
+}
+.ordem-rot {
+    font-family: @num;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    color: @apagado;
+}
+.ordem-grupo {
+    display: flex;
+    height: 46px;
+    box-sizing: border-box;
+    padding: 4px;
+    gap: 4px;
+    border-radius: 23px;
+    background: @painel;
+    border: 1px solid @borda;
+}
+.ordem-bt {
+    height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: @suave;
+    font-family: @txt;
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease;
+    &:hover { color: @texto; background: @painel2; }
+    &.ligado { background: @ambar; color: @fundo; }
+}
+.busca-barra {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 46px;
+    box-sizing: border-box;
+    padding: 0 10px 0 16px;
+    border-radius: 23px;
+    background: @painel;
+    border: 1px solid @borda;
+    color: @apagado;
+    transition: border-color .2s ease, box-shadow .2s ease;
+    &:focus-within {
+        border-color: @ambar;
+        box-shadow: 0 0 0 3px fade(@ambar, 18%);
+        color: @ambar;
+    }
+    .lupa { flex: none; }
+}
+.busca-campo {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: @texto;
+    font-family: @txt;
+    font-size: 18px;
+    user-select: text;
+    &::placeholder { color: @apagado; }
+}
+.busca-limpar {
+    flex: none;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 15px;
+    background: transparent;
+    color: @apagado;
+    cursor: pointer;
+    &:hover { background: @painel2; color: @texto; }
+}
+.busca.com-texto .busca-limpar { display: flex; }
+.sugestoes {
+    display: none;
+    position: absolute;
+    top: 54px;
+    left: 0;
+    right: 0;
+    padding: 6px;
+    border-radius: 16px;
+    background: @painel2;
+    border: 1px solid @borda;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .6);
+    &.aberta { display: block; animation: surgir .15s ease backwards; }
+}
+.sug {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 46px;
+    padding: 0 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    &.marcado { background: fade(@ambar, 14%); }
+    &.marcado .sug-nome { color: @texto; }
+}
+.sug-chip {
+    flex: none;
+    min-width: 58px;
+    box-sizing: border-box;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: @ambar;
+    color: @fundo;
+    font-family: @num;
+    font-size: 17px;
+    font-weight: 700;
+    text-align: center;
+    &.rede { background: @azul; }
+}
+.sug-nome {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 17px;
+    color: @suave;
+    b { color: @ambar; font-weight: 700; }
+}
+.sug-val {
+    flex: none;
+    font-family: @num;
+    font-size: 16px;
+    color: @apagado;
+}
+.sug-nada, .sug-mais {
+    padding: 10px 12px;
+    font-size: 15px;
+    color: @apagado;
+}
+
+.palco {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 82px;
+    height: 392px;
+}
+
+// brilho no chao, embaixo do cartao do centro
+.chao {
+    position: absolute;
+    left: 50%;
+    top: 420px;
+    width: 900px;
+    height: 90px;
+    margin-left: -450px;
+    background: radial-gradient(ellipse at center, fade(@ambar, 16%) 0%, fade(@ambar, 5%) 38%, transparent 70%);
+    pointer-events: none;
+}
+
+.cartao {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 500px;
+    height: 390px;
+    margin-left: -250px;
+    box-sizing: border-box;
+    padding: 16px 22px 8px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, @painel2 0%, @painel 70%);
+    border: 1px solid @borda;
+    box-shadow: 0 26px 50px -20px rgba(0, 0, 0, .8);
+    transition: transform .62s @ease, opacity .5s @ease, box-shadow .4s @ease, border-color .4s @ease;
+    cursor: pointer;
+    overflow: hidden;
+
+    // veu escuro nos cartoes de lado
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 22px;
+        background: @fundo;
+        opacity: .42;
+        transition: opacity .45s @ease;
+        pointer-events: none;
+    }
+    &.ativo {
+        cursor: default;
+        border-color: fade(@ambar, 55%);
+        box-shadow: 0 0 0 1px fade(@ambar, 25%), 0 30px 60px -18px rgba(0, 0, 0, .85), 0 0 70px -10px fade(@ambar, 22%);
+        &::after { opacity: 0; }
+    }
+    &:not(.ativo):hover::after { opacity: .22; }
+
+    // faixa de luz no alto do cartao
+    &::before {
+        content: "";
+        position: absolute;
+        left: 22px;
+        right: 22px;
+        top: 0;
+        height: 2px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, transparent, fade(@ambar, 70%), transparent);
+        opacity: 0;
+        transition: opacity .5s @ease;
+    }
+    &.ativo::before { opacity: 1; }
+    &.rede::before { background: linear-gradient(90deg, transparent, fade(@azul, 80%), transparent); }
+    &.rede.ativo { border-color: fade(@azul, 55%); box-shadow: 0 0 0 1px fade(@azul, 25%), 0 30px 60px -18px rgba(0, 0, 0, .85), 0 0 70px -10px fade(@azul, 24%); }
+}
+
+.c-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 32px;
+}
+.chip {
+    font-family: @num;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: .1em;
+    color: @fundo;
+    background: @ambar;
+    padding: 4px 11px 3px;
+    border-radius: 7px;
+}
+.rede .chip { background: @azul; }
+.pos {
+    font-family: @num;
+    font-size: 18px;
+    font-weight: 600;
+    color: @suave;
+    letter-spacing: .03em;
+}
+
+.c-ident {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 8px;
+    height: 50px;
+    .bus { flex: none; color: @ambar; }
+}
+.rede .c-ident .bus { color: @azul; }
+.nome {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.15;
+    color: @texto;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.c-meio {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    height: 120px;
+}
+.grande .rot {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: @apagado;
+}
+.valor-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 2px;
+}
+.valor {
+    font-family: @num;
+    font-weight: 700;
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: -.02em;
+    color: @ambar;
+    font-variant-numeric: tabular-nums;
+}
+.un {
+    font-family: @num;
+    font-size: 22px;
+    color: @suave;
+}
+.comp {
+    margin-top: 6px;
+    font-size: 17px;
+    color: @suave;
+    &.pior { color: @vermelho; }
+    &.melhor { color: @verde; }
+}
+
+.anel {
+    position: relative;
+    width: 128px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    svg { display: block; }
+}
+.anel-centro {
+    position: absolute;
+    top: 0;
+    left: 20px;
+    width: 88px;
+    height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.anel-val {
+    font-family: @num;
+    font-weight: 700;
+    font-size: 22px;
+    color: @texto;
+    font-variant-numeric: tabular-nums;
+}
+.anel-rot {
+    margin-top: 2px;
+    font-size: 14px;
+    color: @suave;
+    text-align: center;
+    line-height: 1.15;
+}
+
+.c-mini {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    .m {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        border-left: 3px solid @borda;
+        padding-left: 10px;
+        &.azul { border-left-color: @azul; }
+        &.vermelho { border-left-color: @vermelho; }
+        &.verde { border-left-color: @verde; }
+    }
+    .m-rot {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        line-height: 1.1;
+        color: @suave;
+    }
+    .m-val {
+        font-family: @num;
+        font-weight: 600;
+        font-size: 26px;
+        color: @texto;
+        margin-top: 3px;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.c-spark {
+    margin-top: 8px;
+    svg { display: block; overflow: visible; }
+}
+.spark-leg {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: @suave;
+    margin-top: 2px;
+    .spark-meio { letter-spacing: .02em; }
+}
+
+// entrada no centro: linha desenhando, area e anel surgindo
+.cartao.entrando {
+    .spark-linha {
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        animation: desenhar .9s .12s @ease forwards;
+    }
+    .spark-area { animation: surgir .7s .55s ease backwards; }
+    .spark-ponto { animation: surgir .3s .95s ease backwards; }
+    .arco { animation: anel .9s .05s @ease backwards; }
+    .c-ident .bus { animation: rodar .8s @ease backwards; }
+}
+@keyframes desenhar { to { stroke-dashoffset: 0; } }
+@keyframes surgir { from { opacity: 0; } }
+@keyframes anel { from { stroke-dasharray: 0 999; } }
+@keyframes rodar { from { transform: translateX(-26px); opacity: 0; } }
+
+.seta {
+    position: absolute;
+    top: 278px;
+    width: 46px;
+    height: 46px;
+    margin-top: -23px;
+    border-radius: 50%;
+    border: 1px solid @borda;
+    background: fade(@painel2, 92%);
+    color: @suave;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 300;
+    padding: 0;
+    transition: color .2s, border-color .2s, background .2s;
+    &:hover { color: @ambar; border-color: fade(@ambar, 60%); }
+    &.esq { left: 26px; }
+    &.dir { right: 26px; }
+}
+
+.trilha {
+    width: 300px;
+    height: 4px;
+    border-radius: 4px;
+    background: @borda;
+    overflow: hidden;
+}
+.trilha-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 4px;
+    background: linear-gradient(90deg, @azul, @ambar);
+    transition: width .6s @ease;
+}
+
+.vazio {
+    position: absolute;
+    inset: 92px 0 40px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: @apagado;
+}
+.sem-dados .seta, .sem-dados .trilha { display: none; }
