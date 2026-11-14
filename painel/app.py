@@ -82,16 +82,11 @@ def intervalo(periodo: str, ultimo: date) -> tuple[date, date]:
     return INICIO, ultimo
 
 
-def manter_pagina():
-    """Clicar na pagina ativa desmarca a pilula: volta para a ultima pagina escolhida."""
-    if st.session_state.get("pagina") is None:
-        st.session_state.pagina = st.session_state.get("_ultima_pagina", "visao")
-
-
 # ---------- pagina ----------
 
 def main():
-    st.set_page_config(page_title="Radar de ônibus BH", page_icon="🚌", layout="wide")
+    st.set_page_config(page_title="Radar de ônibus BH", page_icon="🚌", layout="wide",
+                       initial_sidebar_state="auto")
     md(CSS)
     st.session_state.banco_fora = False  # cada rodada tenta o banco de novo uma vez
     aviso = st.empty()
@@ -125,10 +120,11 @@ def main():
        f'<div class="dir"><span class="selo">{selo}</span><a class="git" href="{REPO}" target="_blank">'
        'Código e método ↗</a></div></div>')
 
+    with st.sidebar:
+        md('<div class="menu-tit">PÁGINAS</div>')
+        st.radio("Página", list(PAGINAS), key="pagina", label_visibility="collapsed",
+                 format_func=lambda k: f"{PAGINAS[k][1]}  {PAGINAS[k][0]}")
     barra = st.container(key="barra")
-    with barra.container(key="nav"):
-        st.pills("Página", list(PAGINAS), key="pagina", label_visibility="collapsed", on_change=manter_pagina,
-                 format_func=lambda k: f"{PAGINAS[k][1]} {PAGINAS[k][0]}")
     c1, c2, c3, c4 = barra.columns([1.2, 1, 1, 2.2])
     periodo = c1.selectbox("Período", list(PERIODOS), format_func=PERIODOS.get, key="periodo")
     dia = c2.selectbox("Tipo de dia", list(TIPOS_DIA), format_func=TIPOS_DIA.get, key="dia")

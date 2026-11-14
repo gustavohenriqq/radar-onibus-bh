@@ -489,15 +489,15 @@ def q_ranking(f):
     top = r.head(7)
     serie = series_por_linha(f, list(top["route_id"]))
     emax = float(top["excesso_min"].max())
-    linhas = [[f'<span class="k">{p}ª</span>', f'<span class="cod">{esc(rid)}</span>',
-               f'<span class="nome">{esc(nome)}</span>', sparkline(serie.get(rid, []), 160, 34),
+    linhas = [[f'<span class="k">{p}ª</span>', f'<div class="lin2"><b>{esc(rid)}</b><span class="nome">{esc(nome)}</span></div>',
+               sparkline(serie.get(rid, []), 160, 34),
                f'<span class="num">{pct(parte)}</span>', barra(e, emax, br(e, 2)),
                f'<span class="num" style="color:{VERMELHO}">{pct(c)}</span>']
               for p, rid, nome, parte, e, c in zip(top["posicao"], top["route_id"], top["nome"], top["parte"],
                                                    top["excesso_min"], top["colados_pct"])]
-    md(lista("2rem 3.6rem minmax(0,1fr) 5.6rem 3.6rem 7rem 3.6rem",
-             ["#", "Linha", "Nome", "Dia a dia", "% rede", "Espera extra (min)", "Colados"], linhas,
-             "2rem 3.6rem minmax(0,1fr) 7.5rem 3.6rem", ocultar=(2, 3)))
+    md(lista("2rem minmax(0,1fr) 5.6rem 3.6rem 7rem 3.6rem",
+             ["#", "Linha", "Dia a dia", "% rede", "Espera extra (min)", "Colados"], linhas,
+             "2rem minmax(0,1fr) 7.5rem 3.6rem", ocultar=(2, 3)))
     tabela = pd.DataFrame({
         "Posição": r["posicao"], "Linha": r["route_id"], "Nome": r["nome"], "Regular (min)": r["regular_min"],
         "Extra (min)": r["excesso_min"], "% da espera extra": r["parte"], "Colados": r["colados_pct"],
@@ -583,7 +583,7 @@ def q_pnumeros(f):
     md(azulejos([(f"Com {HORAS_MIN_PARADA} h ou mais", br(len(m), 0), "pontos no mapa", TEXTO),
                  ("Espera extra média", f"+{br(extra_de(m), 2)} min", "nos pontos do mapa", AMBAR),
                  ("Os 10 piores somam", pct(top10), "da espera extra do mapa", VERMELHO),
-                 ("Janela", janela, "últimos 28 dias", SUAVE)], cols=4))
+                 ("Janela", "28 dias", janela.replace(" ", " "), SUAVE)], cols=4))
 
 
 def q_piores(f):
@@ -595,7 +595,7 @@ def q_piores(f):
                f'<span class="num">{pct(pa)}</span>']
               for p, n, l, h, e, c, pa in zip(m["posicao"], m["stop_name"], m["linhas"], m["horas"], m["excesso_min"],
                                               m["colados_pct"], m["parte"])]
-    md(lista("1.8rem minmax(0,1.3fr) minmax(0,1fr) 4rem 4rem", ["#", "Ponto", "Espera extra (min)", "Colados", "Parte"],
+    md(lista("1.6rem minmax(0,1fr) 7.6rem 3.8rem 3.4rem", ["#", "Ponto", "Espera extra", "Colados", "Parte"],
              linhas, "1.4rem minmax(0,1fr) 7rem 3.6rem", ocultar=(3,)))
 
 
@@ -639,7 +639,7 @@ def q_hist(f):
         fig.add_vline(x=xv, line=dict(color=cor_, dash="dash", width=1.5))
         fig.add_annotation(x=xv, y=1, yref="paper", text=f"<b>{txt}</b>", showarrow=False,
                            xanchor="right" if xv < 1 else "left", font=dict(color=cor_, size=12))
-    fig.update_xaxes(title="tamanho do intervalo dividido pelo intervalo médio do grupo (1 = igual ao médio)",
+    fig.update_xaxes(title="intervalo ÷ intervalo médio do grupo (1 = igual ao médio)",
                      range=[0, 4.05], dtick=.5)
     fig.update_yaxes(ticksuffix="%", title=None)
     grafico(estilo(fig, 470, legenda=False))
@@ -661,16 +661,16 @@ def q_clinhas(f):
     if top.empty:
         raise SemDado
     topo = float(top["colados"].max())
-    linhas = [[f'<span class="cod">{esc(rid)}</span>', f'<span class="nome">{esc(n)}</span>',
+    linhas = [[f'<div class="lin2"><b>{esc(rid)}</b><span class="nome">{esc(n)}</span></div>',
                barra(c, topo, compacto(c), VERMELHO), f'<span class="num">{pct(p)}</span>']
               for rid, n, c, p in zip(top["route_id"], top["nome"], top["colados"], top["colados_pct"])]
-    md(lista("3.8rem minmax(0,1fr) 8rem 3.8rem", ["Linha", "Nome", "Colados", "% da linha"], linhas))
+    md(lista("minmax(0,1fr) 7.8rem 3.8rem", ["Linha", "Colados", "% da linha"], linhas))
 
 
 def pg_colados(f):
     painel("c_num", VERMELHO, lambda: q_cnum(f))
     st.write("")
-    a, b = st.columns([1.72, 1], gap="medium")
+    a, b = st.columns([1.35, 1], gap="medium")
     with a:
         painel("c_hist", VERMELHO, lambda: q_hist(f), "02", "DISTRIBUIÇÃO", "Como os intervalos se espalham",
                "Parte dos intervalos em cada tamanho · rede inteira: não segue o filtro de linha")
@@ -743,11 +743,11 @@ def q_pv_linhas(f):
     p = previsao(f).groupby("route_id", as_index=False)[["alertas", "acertos"]].sum()
     top = p.sort_values(["alertas", "route_id"], ascending=[False, True]).head(7)
     topo = float(top["alertas"].max())
-    linhas = [[f'<span class="cod">{esc(rid)}</span>', f'<span class="nome">{esc(f["nomes"].get(rid, ""))}</span>',
+    linhas = [[f'<div class="lin2"><b>{esc(rid)}</b><span class="nome">{esc(f["nomes"].get(rid, ""))}</span></div>',
                barra(a, topo, br(a, 0), AZUL),
                f'<span class="num" style="color:{VERDE}">{pct(c / a if a else None, 0)}</span>']
               for rid, a, c in zip(top["route_id"], top["alertas"], top["acertos"])]
-    md(lista("3.8rem minmax(0,1fr) 9.5rem 3.6rem", ["Linha", "Nome", "Alertas", "Acerto"], linhas))
+    md(lista("minmax(0,1fr) 8.5rem 3.6rem", ["Linha", "Alertas", "Acerto"], linhas))
 
 
 def pg_previsao(f):
@@ -904,13 +904,13 @@ def q_ganho(f):
         md('<div class="vazio">Com 0% dos pares espaçados não há ganho. Mova o controle à direita.</div>')
         return
     topo = float(top["ganho"].max())
-    linhas = [[f'<span class="cod">{esc(rid)}</span>', f'<span class="nome">{esc(n)}</span>',
+    linhas = [[f'<div class="lin2"><b>{esc(rid)}</b><span class="nome">{esc(n)}</span></div>',
                f'<span class="num" style="color:{AMBAR}">+{br(x, 2)}</span>', barra(g, topo, f"−{br(g, 2)}", VERDE),
                f'<span class="num">{pct(p)}</span>']
               for rid, n, x, g, p in zip(top["route_id"], top["nome"], top["excesso_min"], top["ganho"],
                                          top["parte_ganho"])]
-    md(lista("3.8rem minmax(0,1fr) 4.2rem 8.5rem 4rem", ["Linha", "Nome", "Hoje", "Ganho (min)", "Do ganho"], linhas,
-             "3.4rem minmax(0,1fr) 7.5rem 3.6rem", ocultar=(2,)))
+    md(lista("minmax(0,1fr) 4.2rem 8.5rem 4rem", ["Linha", "Hoje", "Ganho (min)", "Do ganho"], linhas,
+             "minmax(0,1fr) 7.5rem 3.6rem", ocultar=(1,)))
 
 
 def pg_simulador(f):
@@ -1201,8 +1201,8 @@ def q_rotas(f):
        + f'<div class="refleg">tracejado: a rede, +{br(rede, 2)}</div>')
     top = r[r["trajeto"] == GRUPO_ROTA].head(5)
     md(f'<div class="dois" style="margin-top:1.3rem">AS DE MAIOR PESO ENTRE AS QUE VÃO {GRUPO_ROTA.upper()}</div>'
-       + lista("3.8rem minmax(0,1fr) 4rem 4rem", ["Linha", "Nome", "Extra", "Colados"],
-               [[f'<span class="cod">{esc(rid)}</span>', f'<span class="nome">{esc(n)}</span>',
+       + lista("minmax(0,1fr) 4rem 4rem", ["Linha", "Extra", "Colados"],
+               [[f'<div class="lin2"><b>{esc(rid)}</b><span class="nome">{esc(n)}</span></div>',
                  f'<span class="num" style="color:{AMBAR}">+{br(e, 2)}</span>',
                  f'<span class="num" style="color:{VERMELHO}">{pct(c)}</span>']
                 for rid, n, e, c in zip(top["route_id"], top["nome"], top["excesso_min"], top["colados_pct"])])
