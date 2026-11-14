@@ -1,0 +1,60 @@
+{
+    "dataRoles": [
+        { "displayName": "Linha", "name": "linha", "kind": "Grouping" },
+        { "displayName": "Nome da linha", "name": "nome", "kind": "Measure" },
+        { "displayName": "Espera média", "name": "espera", "kind": "Measure" },
+        { "displayName": "Espera extra", "name": "extra", "kind": "Measure" },
+        { "displayName": "Colados", "name": "colados", "kind": "Measure" },
+        { "displayName": "Corte sem colagem", "name": "corte", "kind": "Measure" },
+        { "displayName": "Parte da espera extra", "name": "parte", "kind": "Measure" },
+        { "displayName": "Posição", "name": "posicao", "kind": "Measure" },
+        { "displayName": "Volume (ordem)", "name": "volume", "kind": "Measure" },
+        { "displayName": "Tendência (texto)", "name": "tendencia", "kind": "Measure" },
+        { "displayName": "Rede (texto)", "name": "rede", "kind": "Measure" }
+    ],
+    "dataViewMappings": [
+        {
+            "conditions": [
+                {
+                    "linha": { "max": 1 }, "nome": { "max": 1 }, "espera": { "max": 1 }, "extra": { "max": 1 },
+                    "colados": { "max": 1 }, "corte": { "max": 1 }, "parte": { "max": 1 }, "posicao": { "max": 1 },
+                    "volume": { "max": 1 }, "tendencia": { "max": 1 }, "rede": { "max": 1 }
+                }
+            ],
+            "categorical": {
+                "categories": {
+                    "for": { "in": "linha" },
+                    "dataReductionAlgorithm": { "top": { "count": 1000 } }
+                },
+                "values": {
+                    "select": [
+                        { "bind": { "to": "nome" } },
+                        { "bind": { "to": "espera" } },
+                        { "bind": { "to": "extra" } },
+                        { "bind": { "to": "colados" } },
+                        { "bind": { "to": "corte" } },
+                        { "bind": { "to": "parte" } },
+                        { "bind": { "to": "posicao" } },
+                        { "bind": { "to": "volume" } },
+                        { "bind": { "to": "tendencia" } },
+                        { "bind": { "to": "rede" } }
+                    ]
+                }
+            }
+        }
+    ],
+    "objects": {
+        "general": {
+            "properties": {
+                "filter": { "type": { "filter": true } }
+            }
+        },
+        "ordem": {
+            "properties": {
+                "modo": { "type": { "text": true } }
+            }
+        }
+    },
+    "supportsKeyboardFocus": true,
+    "privileges": []
+}

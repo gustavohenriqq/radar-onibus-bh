@@ -1,0 +1,21 @@
+{
+    "visual": {
+        "name": "radarCarrossel",
+        "displayName": "Carrossel de linhas",
+        "guid": "radarCarrossel02E4BDFE01EB4C8F9F3046BF8481C8FF",
+        "visualClassName": "Visual",
+        "version": "1.0.0.0",
+        "description": "Carrossel 3D das linhas de onibus: o cartao do centro filtra a pagina.",
+        "supportUrl": "https://github.com/gustavohenriqq/radar-onibus-bh",
+        "gitHubUrl": "https://github.com/gustavohenriqq/radar-onibus-bh"
+    },
+    "apiVersion": "5.11.1",
+    "author": { "name": "radar-onibus-bh", "email": "radar@example.com" },
+    "assets": { "icon": "assets/icon.png" },
+    "externalJS": null,
+    "style": "style/visual.less",
+    "capabilities": "capabilities.json",
+    "dependencies": null,
+    "stringResources": [],
+    "version": "1.0.0.0"
+}

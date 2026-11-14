@@ -1,0 +1,97 @@
+/// Alertas e acertos do modelo de onibus colados (fase 5), por dia e linha.
+table fato_previsao
+	lineageTag: 96005818-6e70-5537-a37c-ee00e7367612
+
+	column data_bh
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: fcc79ae5-c5bc-5478-8896-fa58d16eaf99
+		summarizeBy: none
+		sourceColumn: data_bh
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column conjunto
+		dataType: string
+		lineageTag: b3a6439b-4aa5-59be-aa4c-6ae0ee210083
+		summarizeBy: none
+		sourceColumn: conjunto
+
+		annotation SummarizationSetBy = User
+
+	column route_id
+		dataType: string
+		lineageTag: 2eb8aff2-86cc-5801-901b-e6eb152ba74c
+		summarizeBy: none
+		sourceColumn: route_id
+
+		annotation SummarizationSetBy = User
+
+	column versao_modelo
+		dataType: string
+		lineageTag: 4d3b265e-cefc-5310-a27e-cf3fb17cc53d
+		summarizeBy: none
+		sourceColumn: versao_modelo
+
+		annotation SummarizationSetBy = User
+
+	column limiar
+		dataType: double
+		formatString: 0.00
+		lineageTag: d969bf18-3aa2-5213-b3cd-cec6414becc2
+		summarizeBy: none
+		sourceColumn: limiar
+
+		annotation SummarizationSetBy = User
+
+	column exemplos
+		dataType: int64
+		formatString: 0
+		lineageTag: f35b4395-4720-5e3e-a74b-a1adefbb677b
+		summarizeBy: none
+		sourceColumn: exemplos
+
+		annotation SummarizationSetBy = User
+
+	column positivos
+		dataType: int64
+		formatString: 0
+		lineageTag: d75f58c4-7f31-5058-ac8a-8fd504a644c4
+		summarizeBy: none
+		sourceColumn: positivos
+
+		annotation SummarizationSetBy = User
+
+	column alertas
+		dataType: int64
+		formatString: 0
+		lineageTag: b0dc5202-bbd7-5c92-8f5b-c923ecd93af2
+		summarizeBy: none
+		sourceColumn: alertas
+
+		annotation SummarizationSetBy = User
+
+	column acertos
+		dataType: int64
+		formatString: 0
+		lineageTag: f0f4b19c-9522-5dc1-9d40-95136fa232c6
+		summarizeBy: none
+		sourceColumn: acertos
+
+		annotation SummarizationSetBy = User
+
+	partition fato_previsao = m
+		mode: import
+		source =
+				let
+				    Fonte = PostgreSQL.Database(ServidorPostgres, BancoPostgres),
+				    Tabela = Fonte{[Schema = "radar", Item = "ml_resumo"]}[Data],
+				    Selecao = Table.SelectColumns(Tabela, {"data_bh", "conjunto", "route_id", "versao_modelo", "limiar", "exemplos", "positivos", "alertas", "acertos"}),
+				    Colunas = Table.TransformColumnTypes(Selecao, {{"data_bh", type date}, {"conjunto", type text}, {"route_id", type text}, {"versao_modelo", type text}, {"limiar", type number}, {"exemplos", Int64.Type}, {"positivos", Int64.Type}, {"alertas", Int64.Type}, {"acertos", Int64.Type}}),
+				    Pronto = Colunas
+				in
+				    Pronto
+
+	annotation PBI_ResultType = Table

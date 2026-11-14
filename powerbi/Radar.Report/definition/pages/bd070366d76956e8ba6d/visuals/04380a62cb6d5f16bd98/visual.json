@@ -1,0 +1,319 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "04380a62cb6d5f16bd98",
+  "position": {
+    "x": 136,
+    "y": 148,
+    "z": 1700,
+    "height": 484,
+    "width": 1752,
+    "tabOrder": 1700
+  },
+  "visual": {
+    "visualType": "radarCarrossel02E4BDFE01EB4C8F9F3046BF8481C8FF",
+    "query": {
+      "queryState": {
+        "linha": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_linha"
+                    }
+                  },
+                  "Property": "route_id"
+                }
+              },
+              "queryRef": "dim_linha.route_id",
+              "nativeQueryRef": "route_id"
+            }
+          ]
+        },
+        "nome": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Nome da linha"
+                }
+              },
+              "queryRef": "_Medidas.Nome da linha",
+              "nativeQueryRef": "Nome da linha"
+            }
+          ]
+        },
+        "espera": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Espera média"
+                }
+              },
+              "queryRef": "_Medidas.Espera média",
+              "nativeQueryRef": "Espera média"
+            }
+          ]
+        },
+        "extra": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Espera extra"
+                }
+              },
+              "queryRef": "_Medidas.Espera extra",
+              "nativeQueryRef": "Espera extra"
+            }
+          ]
+        },
+        "colados": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Colados"
+                }
+              },
+              "queryRef": "_Medidas.Colados",
+              "nativeQueryRef": "Colados"
+            }
+          ]
+        },
+        "corte": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Corte sem colagem"
+                }
+              },
+              "queryRef": "_Medidas.Corte sem colagem",
+              "nativeQueryRef": "Corte sem colagem"
+            }
+          ]
+        },
+        "parte": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Parte da espera extra"
+                }
+              },
+              "queryRef": "_Medidas.Parte da espera extra",
+              "nativeQueryRef": "Parte da espera extra"
+            }
+          ]
+        },
+        "posicao": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Posição"
+                }
+              },
+              "queryRef": "_Medidas.Posição",
+              "nativeQueryRef": "Posição"
+            }
+          ]
+        },
+        "volume": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Volume"
+                }
+              },
+              "queryRef": "_Medidas.Volume",
+              "nativeQueryRef": "Volume"
+            }
+          ]
+        },
+        "tendencia": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Carrossel tendência"
+                }
+              },
+              "queryRef": "_Medidas.Carrossel tendência",
+              "nativeQueryRef": "Carrossel tendência"
+            }
+          ]
+        },
+        "rede": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Medidas"
+                    }
+                  },
+                  "Property": "Carrossel rede"
+                }
+              },
+              "queryRef": "_Medidas.Carrossel rede",
+              "nativeQueryRef": "Carrossel rede"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "dropShadow": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "padding": [
+        {
+          "properties": {
+            "left": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            },
+            "top": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            },
+            "right": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            },
+            "bottom": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -96,3 +96,75 @@ def sql_metricas(chaves: list[str], onde: str, tabela: str = "linha_dia_faixa") 
     sel = ", ".join(chaves + cols)
     grupo = f" group by {', '.join(chaves)} order by {', '.join(chaves)}" if chaves else ""
     return f"select {sel} from {ESQUEMA}.{tabela} where {onde}{grupo}"
+
+
+# ---------------------------------------------------------------------------
+# Somas cruas: o painel agrega em pandas e calcula as metricas com metricas(),
+# a mesma conta de METRICAS. Uma consulta serve varios quadros da mesma pagina.
+# ---------------------------------------------------------------------------
+SOMAS = ["grupos", "n", "soma", "soma2_n", "dev2", "colados", "abaixo_60s", "reducao", "pares",
+         "pulo_primeiro", "pulo_colado", "var_n"]
+# Chave -> expressao SQL (dia_semana: 1 = segunda ... 7 = domingo, como WEEKDAY ( , 2 ) no Power BI)
+CHAVES_SOMAS = {c: c for c in DIMENSOES} | {"dia_semana": "extract(isodow from data_bh)::int"}
+
+
+def sql_somas(chaves: list[str], onde: str) -> str:
+    """Somas reagregaveis de linha_dia_faixa por chaves da lista (nada vem do usuario no texto)."""
+    desconhecidas = set(chaves) - set(CHAVES_SOMAS)
+    if desconhecidas:
+        raise ValueError(f"chave fora da lista: {sorted(desconhecidas)}")
+    cols = [f"{CHAVES_SOMAS[c]} as {c}" for c in chaves] + [f"sum({s})::float8 as {s}" for s in SOMAS]
+    grupo = f" group by {', '.join(CHAVES_SOMAS[c] for c in chaves)}" if chaves else ""
+    return f"select {', '.join(cols)} from {ESQUEMA}.linha_dia_faixa where {onde}{grupo}"
+
+
+def metricas(df):
+    """As metricas de METRICAS sobre um DataFrame de somas (uma linha por grupo). Devolve uma copia."""
+    import numpy as np
+    d = df.copy()
+    soma = d["soma"].replace(0, np.nan)
+    n = d["n"].replace(0, np.nan)
+    dev2 = d["dev2"].replace(0, np.nan)
+    d["headways"] = d["n"]
+    d["horas"] = d["soma"] / 3600
+    d["regular_min"] = d["soma2_n"] / 2 / soma / 60
+    d["excesso_min"] = d["dev2"] / 2 / soma / 60
+    d["media_min"] = d["regular_min"] + d["excesso_min"]
+    d["volume_min_h"] = d["dev2"] / 2 / 60 / 3600
+    d["colados_pct"] = d["colados"] / n
+    d["abaixo_60s_pct"] = d["abaixo_60s"] / n
+    d["reducao_pct"] = d["reducao"] / dev2
+    d["vies_min"] = d["var_n"] / soma / 60
+    d["vies_pct"] = d["var_n"] / (dev2 / 2)
+    comboio = d["pares"] + d["pulo_primeiro"] + d["pulo_colado"]
+    d["comboio_pct"] = d["pulo_colado"] / comboio.replace(0, np.nan)
+    return d
+
+
+def total(df):
+    """Soma as somas de todas as linhas e devolve uma Series com as metricas (vazia se nao houver dado)."""
+    import pandas as pd
+    if df is None or df.empty or not df["n"].sum():
+        return None
+    return metricas(pd.DataFrame([df[SOMAS].sum()])).iloc[0]
+
+
+def agrega(df, chaves: list[str]):
+    """Reagrega as somas por outras chaves e calcula as metricas."""
+    return metricas(df.groupby(chaves, as_index=False, sort=False)[SOMAS].sum())
+
+
+# Somas por ponto (ultimos 28 dias), sem corte de horas: o corte do mapa e feito no painel.
+SOMAS_PARADA = ["n", "soma", "soma2_n", "dev2", "colados"]
+
+
+def sql_paradas_somas(onde: str) -> str:
+    cols = ", ".join(f"sum({s})::float8 as {s}" for s in SOMAS_PARADA)
+    return (f"select stop_id, max(stop_name) as stop_name, max(stop_lat) as lat, max(stop_lon) as lon, "
+            f"max(linhas) as linhas, min(janela_ini) as janela_ini, max(janela_fim) as janela_fim, {cols} "
+            f"from {ESQUEMA}.paradas_28d where {onde} group by stop_id")
+
+
+SQL_ML_LINHAS = (f"select data_bh, route_id, sum(exemplos)::float8 as exemplos, sum(positivos)::float8 as positivos, "
+                 f"sum(alertas)::float8 as alertas, sum(acertos)::float8 as acertos, max(limiar) as limiar "
+                 f"from {ESQUEMA}.ml_resumo where conjunto = 'teste' group by data_bh, route_id")

@@ -623,6 +623,118 @@ está na [seção 9 da análise](docs/analise.md).
 
 ![Ônibus colados e o teste do modelo de previsão](docs/img/painel_colados.png)
 
+## O que os dados sugerem
+
+São sugestões para a operação e o planejamento das linhas, cada uma com o número
+que a sustenta. O recorte é o da análise: dia útil, linhas de alta frequência
+(intervalo médio de até 15 minutos), 15/09 a 05/11/2026. A rede tem 2,95 minutos
+de espera extra por passageiro, sobre 5,94 de espera com ônibus regulares. As
+contas estão em [`docs/analise.md`](docs/analise.md) e [`docs/ml.md`](docs/ml.md),
+e as que não estão lá saem direto dos CSVs de `analise/saida/` (indicado em
+cada item). No Power BI (pasta `powerbi/`), a página "Onde agir" mostra os
+itens 2 a 7, e a página "O que pesa" mostra os itens 1, 8 e 9 com o recorte
+dos filtros.
+
+**O limite de tudo abaixo:** não há dado de demanda. Cada ponto e hora pesa pelo
+serviço que tem, não pelos passageiros. Com a bilhetagem, a ordem das linhas
+pode mudar. As sugestões apontam onde olhar primeiro; o ganho real de cada
+medida pede teste na operação.
+
+### Na operação do dia a dia
+
+1. **Controlar o espaçamento, não só o horário de saída.** Entre as 103 linhas
+   com pelo menos 2.000 horas de serviço, a espera extra de cada uma quase não
+   tem relação com o intervalo entre ônibus (correlação de -0,03) e tem muita
+   com a parte de ônibus colados (0,79). Pôr mais ônibus numa linha irregular
+   não resolve sozinho. Fonte: `linhas.csv`.
+2. **Começar pelas 20 linhas que somam mais espera extra.** Elas têm 55,3% da
+   espera extra da rede com 46,7% das horas de serviço; as 40 primeiras chegam
+   a 79,7%. Regularizar os colados só nelas cortaria 13,5% da espera extra da
+   rede. Fonte: análise, seção 3.2.
+3. **Desfazer os colados corta pelo menos um quarto da espera extra.** São
+   12,9% dos intervalos, e 6,8% ficam abaixo de 60 segundos. Fazer o ônibus
+   atrasado passar no meio do caminho entre o buraco e o colado tira 24,5% da
+   espera extra (0,72 minuto por passageiro). Os comboios de três ou mais
+   ônibus ficam de fora dessa conta e pedem controle desde o despacho no
+   terminal. Fonte: análise, seções 4 e 7.
+4. **Reforçar o controle à tarde.** O pico da tarde (16 h às 19 h) tem 3,38
+   minutos de espera extra por passageiro, contra 2,50 no pico da manhã, com a
+   mesma parte de colados (13,7% e 13,5%). À tarde pesa mais o buraco longo
+   entre ônibus que o par colado. A manhã, por ter mais serviço, segue com
+   25,6% do volume. Fonte: análise, seção 3.1.
+5. **Usar a previsão como lista de prioridade, não como alerta automático.** O
+   modelo aponta com dez paradas de antecedência os ônibus que vão chegar
+   colados: no decil de maior risco, 57% chegam colados, contra 15,6% de todos.
+   Com a hipótese de custo atual, porém, disparar intervenção automática poupa
+   só 0,8%. Mostrar ao controle os ônibus do decil de maior risco não depende
+   dessa hipótese. Antes de automatizar, medir na operação quanto custa uma
+   intervenção e quantos pares ela evita. Fonte: `docs/ml.md`.
+
+### No desenho das linhas
+
+6. **Rever as linhas que saem de estação e vão ao centro.** Agrupando as 192
+   linhas pelo nome (estação, centro, Savassi ou hospitais), a espera extra
+   cresce quanto mais a linha atravessa a cidade. Fonte: `linhas.csv`, com a
+   regra de nome de `powerbi/modelo.py` (`TRAJETOS`).
+
+   | Trajeto | Linhas | Horas de serviço | Espera regular | Espera extra | Colados |
+   |---|---|---|---|---|---|
+   | Da estação ao centro | 17 | 13,1% | 5,23 min | 3,64 min | 16,7% |
+   | Do bairro ao centro | 27 | 16,0% | 6,43 min | 3,55 min | 13,2% |
+   | Entre bairros | 68 | 32,2% | 6,09 min | 2,95 min | 12,2% |
+   | Do bairro à estação | 80 | 38,7% | 5,86 min | 2,46 min | 11,8% |
+
+   As linhas da estação ao centro têm o menor intervalo e a pior regularidade:
+   ônibus frequentes que cruzam o trânsito do centro colam com facilidade. Duas
+   saídas a testar: seccionar a linha na estação, com troca para um serviço
+   curto e regular até o centro, ou dar prioridade a ela nas vias do centro. As
+   linhas que só alimentam a estação são as mais regulares da rede.
+7. **Olhar primeiro o corredor da Av. Waldyr Soeiro Emrich.** Pela média dos
+   pontos com cada nome de via, ponderada pelas horas de serviço, ela fica bem
+   acima de todas as outras. Fonte: `paradas.csv` (a análise, seção 3.3, traz
+   os quatro primeiros).
+
+   | Via (nome do ponto contém) | Pontos | Espera extra | Colados |
+   |---|---|---|---|
+   | Waldyr Soeiro Emrich | 32 | 4,78 min | 16,9% |
+   | Cristiano Machado | 95 | 3,37 min | 12,0% |
+   | Raja Gabaglia | 32 | 3,25 min | 16,3% |
+   | Úrsula Paulino | 18 | 3,23 min | 12,5% |
+   | Nossa Senhora do Carmo | 21 | 3,14 min | 17,0% |
+   | Amazonas | 84 | 3,12 min | 15,3% |
+   | Antônio Carlos | 81 | 2,65 min | 13,3% |
+   | Portugal | 37 | 2,02 min | 12,1% |
+   | Contorno | 73 | 1,94 min | 7,3% |
+
+   Prioridade na via (faixa exclusiva, semáforo) é candidata para as vias do
+   topo, mas a tabela mostra onde a espera extra está, não a causa: ela não diz
+   o que uma faixa mudaria numa via específica.
+8. **Não espalhar o esforço pelos pontos de maior movimento.** Ponto com mais
+   linhas não tem mais espera extra: 3,00 minutos nos pontos de uma linha, 2,92
+   nos de duas ou três, 2,95 nos de quatro a oito e 2,74 nos de nove ou mais. A
+   irregularidade é da linha, e o controle de espaçamento é feito linha a
+   linha. Fonte: `paradas.csv`, coluna `linhas`.
+
+### No acompanhamento
+
+9. **Tratar domingo como dia de atenção.** Domingo e feriado têm 3,10 minutos
+   de espera extra por passageiro, mais que o dia útil (2,95) e o sábado
+   (2,28). Pouca coisa roda com alta frequência no fim de semana, então o
+   número pesa pouco no total, mas atinge quem depende do ônibus nesses dias.
+   Fonte: análise, seção 5.
+10. **Planejar os dias de evento com quadro próprio e medir depois.** Os dois
+    piores dias do período foram domingos de eleição com frota extra (4,29 e
+    5,57 minutos; no segundo houve também temporal). Parte da alta vem da
+    própria medida, que compara cada intervalo com a média de um domingo
+    comum. Mesmo assim, 4 mil viagens extras não trouxeram regularidade. Vale
+    planejar o espaçamento da frota extra, não só a quantidade. Fonte:
+    análise, seção 9.
+11. **Separar falha de GPS de falha de serviço antes de cobrar a operação.**
+    Nas linhas suplementares, a espera extra subiu para 8 a 9 minutos em dias
+    de outubro em que frota e viagens não mudaram: faltaram posições no feed.
+    Um alerta de cobertura do GPS por linha evita confundir as duas coisas.
+    Fonte: análise, seção 9.
+
 ## O que foi descartado, com a evidência
 
 Cada alternativa abaixo foi medida no dado real antes de ser descartada.

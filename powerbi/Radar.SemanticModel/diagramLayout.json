@@ -1,0 +1,230 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 1637.759815913842,
+            "y": 502.65383349255785
+          },
+          "nodeIndex": "_Medidas",
+          "nodeLineageTag": "430f70f9-20d9-5a6e-9e1b-69b8f13253b8",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1921.759815913842,
+            "y": 576.65383349255785
+          },
+          "nodeIndex": "cargas",
+          "nodeLineageTag": "18a47026-7e75-513c-b7a6-fc0a2de080ad",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1035.5543268652884,
+            "y": 623.68061717361343
+          },
+          "nodeIndex": "dim_classe",
+          "nodeLineageTag": "18c323f3-6fb2-5404-b24b-44f6258faf9a",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 462.6692821450074,
+            "y": 599.57421007852213
+          },
+          "nodeIndex": "dim_data",
+          "nodeLineageTag": "f0ae3dbe-3cc6-56d2-bc64-d40103872a98",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 838.27435831066248,
+            "y": -50
+          },
+          "nodeIndex": "dim_faixa",
+          "nodeLineageTag": "8294fa14-ea72-5e5b-8929-ff19de80d8d5",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1224.386430397617,
+            "y": 826.791858072892
+          },
+          "nodeIndex": "dim_frequencia",
+          "nodeLineageTag": "6671156a-d24e-50a8-8ff4-fd4e607ad619",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 551.138875147764,
+            "y": 74.0649354406155
+          },
+          "nodeIndex": "dim_linha",
+          "nodeLineageTag": "6e27ceca-3ce0-5cd9-b5f1-f6979b7704eb",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1320.587510341114,
+            "y": 514.10832687691743
+          },
+          "nodeIndex": "dim_tipo_dia",
+          "nodeLineageTag": "70d2d15e-16f4-5121-9c0c-f8f8d2c57520",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2205.759815913842,
+            "y": 576.65383349255785
+          },
+          "nodeIndex": "eventos",
+          "nodeLineageTag": "1db0b9bb-62d2-5638-9ee9-860ed3a576a9",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 960.0821516172723,
+            "y": 1031.3076669851157
+          },
+          "nodeIndex": "fato_hist",
+          "nodeLineageTag": "587cc255-8f80-5e91-8020-e22f51de0989",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 749.74532352552421,
+            "y": 296.92124006225731
+          },
+          "nodeIndex": "fato_linha",
+          "nodeLineageTag": "77390d5b-3c68-508f-96ab-a86251772392",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1403.759815913842,
+            "y": 161.74093777093685
+          },
+          "nodeIndex": "fato_paradas",
+          "nodeLineageTag": "b3bfa305-666a-56bc-be16-bd9f53190ded",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 264.14163627970197,
+            "y": 249.98992978556271
+          },
+          "nodeIndex": "fato_previsao",
+          "nodeLineageTag": "96005818-6e70-5537-a37c-ee00e7367612",
+          "size": {
+            "height": 296,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 247.69366183816294,
+            "y": 925.02093969439193
+          },
+          "nodeIndex": "fato_qualidade",
+          "nodeLineageTag": "6c6cdc75-eb59-5473-ae7a-7515fdf84faf",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2489.759815913842,
+            "y": 552.65383349255785
+          },
+          "nodeIndex": "sel_espacamento",
+          "nodeLineageTag": "84ad8651-a228-5cb7-b325-e219696a1936",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 50,
+            "y": 720.22045869907606
+          },
+          "nodeIndex": "sel_periodo",
+          "nodeLineageTag": "41c83b8a-9b78-5339-8190-0d567506f8e2",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "Todas as tabelas",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "Todas as tabelas",
+  "defaultDiagram": "Todas as tabelas"
+}

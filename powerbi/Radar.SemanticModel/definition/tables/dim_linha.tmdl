@@ -1,0 +1,57 @@
+/// Nome de cada linha (routes.txt do GTFS).
+table dim_linha
+	lineageTag: 6e27ceca-3ce0-5cd9-b5f1-f6979b7704eb
+
+	column route_id
+		dataType: string
+		lineageTag: b3ab785f-5455-58ce-8a94-d7e5aba68f37
+		summarizeBy: none
+		sourceColumn: route_id
+
+		annotation SummarizationSetBy = User
+
+	column route_long_name
+		dataType: string
+		lineageTag: d9b9a363-6fdc-551f-b6d4-f14f67a5ab06
+		summarizeBy: none
+		sourceColumn: route_long_name
+
+		annotation SummarizationSetBy = User
+
+	column rotulo = dim_linha[route_id] & " · " & dim_linha[route_long_name]
+		dataType: string
+		lineageTag: 215e2466-8355-5a33-aba5-a5ec8211fc00
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column trajeto = VAR n = dim_linha[route_long_name] VAR est = CONTAINSSTRING ( n, "Estaç" ) VAR cen = CONTAINSSTRING ( n, "Centro" ) || CONTAINSSTRING ( n, "Savassi" ) || CONTAINSSTRING ( n, "Hospita" ) RETURN SWITCH ( TRUE (), est && cen, "Da estação ao centro", cen, "Do bairro ao centro", NOT est, "Entre bairros", TRUE (), "Do bairro à estação" )
+		dataType: string
+		lineageTag: c9ac56ac-3575-556b-8fd8-5e159d608fc9
+		summarizeBy: none
+		sortByColumn: trajeto_ordem
+
+		annotation SummarizationSetBy = User
+
+	column trajeto_ordem = VAR n = dim_linha[route_long_name] VAR est = CONTAINSSTRING ( n, "Estaç" ) VAR cen = CONTAINSSTRING ( n, "Centro" ) || CONTAINSSTRING ( n, "Savassi" ) || CONTAINSSTRING ( n, "Hospita" ) RETURN SWITCH ( TRUE (), est && cen, 1, cen, 2, NOT est, 3, TRUE (), 4 )
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 3e859297-4ed5-589e-bd43-2bde7990fa28
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	partition dim_linha = m
+		mode: import
+		source =
+				let
+				    Fonte = PostgreSQL.Database(ServidorPostgres, BancoPostgres),
+				    Tabela = Fonte{[Schema = "radar", Item = "linhas"]}[Data],
+				    Selecao = Table.SelectColumns(Tabela, {"route_id", "route_long_name"}),
+				    Colunas = Table.TransformColumnTypes(Selecao, {{"route_id", type text}, {"route_long_name", type text}}),
+				    Pronto = Colunas
+				in
+				    Pronto
+
+	annotation PBI_ResultType = Table

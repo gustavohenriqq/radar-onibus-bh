@@ -1,0 +1,13 @@
+/// Servidor do Postgres do painel (endpoint do Neon). O valor real nao vai para o Git:
+/// o filtro powerbi/tools/git_censura.py troca pelo marcador.
+expression ServidorPostgres = "SEU-ENDPOINT.neon.tech" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 29d1075f-e166-56f8-8d17-c0b9b6455da0
+
+	annotation PBI_ResultType = Text
+
+/// Banco do Postgres com o esquema radar.
+expression BancoPostgres = "neondb" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: d8dacee0-a6f8-59ca-ab58-5e51266b0fdf
+
+	annotation PBI_ResultType = Text
+

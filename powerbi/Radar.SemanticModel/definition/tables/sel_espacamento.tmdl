@@ -1,0 +1,17 @@
+/// Parametro do simulador: parte dos pares colados que seria espacada.
+table sel_espacamento
+	lineageTag: 84ad8651-a228-5cb7-b325-e219696a1936
+
+	column espacamento
+		dataType: double
+		formatString: 0%
+		lineageTag: 34336184-ecae-5cac-8104-7bd4f47ff93e
+		summarizeBy: none
+		sourceColumn: [espacamento]
+
+		annotation SummarizationSetBy = User
+
+	partition sel_espacamento = calculated
+		mode: import
+		source =
+				SELECTCOLUMNS ( GENERATESERIES ( 0, 1, 0.25 ), "espacamento", [Value] )

@@ -1,0 +1,2490 @@
+/// So medidas. Todo numero do relatorio sai daqui.
+table _Medidas
+	lineageTag: 430f70f9-20d9-5a6e-9e1b-69b8f13253b8
+
+	/// Grupos linha x sentido x parada x dia x faixa com 3 ou mais intervalos.
+	measure Grupos = SUM ( fato_linha[grupos] )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: badd51d5-93b3-580c-83a1-9c7b4df30c87
+
+	/// Intervalos validos entre onibus da mesma linha (headways).
+	measure Intervalos = SUM ( fato_linha[n] )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 80eb04f7-d1af-52d1-8645-f0c21234eb5b
+
+	/// Tempo coberto pelos intervalos medidos, em horas.
+	measure 'Horas de serviço' = SUM ( fato_linha[soma] ) / 3600
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 71ac5f1f-c90b-5682-9a43-bb5e01c45c49
+
+	/// Espera media com os mesmos onibus em intervalos iguais (min). sum(soma2_n) / 2 / sum(soma) / 60.
+	measure 'Espera regular' = DIVIDE ( SUM ( fato_linha[soma2_n] ), SUM ( fato_linha[soma] ) ) / 2 / 60
+		formatString: 0.00
+		displayFolder: Base
+		lineageTag: a513eeed-9d89-5217-bdde-28b2256b135e
+
+	/// Espera a mais por passageiro, so pela irregularidade dos intervalos (min). sum(dev2) / 2 / sum(soma) / 60.
+	measure 'Espera extra' = DIVIDE ( SUM ( fato_linha[dev2] ), SUM ( fato_linha[soma] ) ) / 2 / 60
+		formatString: 0.00
+		displayFolder: Base
+		lineageTag: ed03d157-7527-5e90-9a1f-9fa0f9d4be32
+
+	/// Espera extra vezes horas de servico (min x h). Ordena linhas e pontos pelo peso na rede.
+	measure Volume = SUM ( fato_linha[dev2] ) / 2 / 60 / 3600
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: ece907eb-ffaa-58ee-a91e-d2db56e05a71
+
+	/// Intervalos menores que 1/4 do intervalo medio do grupo.
+	measure Colados = DIVIDE ( SUM ( fato_linha[colados] ), SUM ( fato_linha[n] ) )
+		formatString: 0.0%
+		displayFolder: Base
+		lineageTag: 62cbeb3b-1c29-577b-b15a-94f609798c43
+
+	/// Intervalos menores que 60 segundos.
+	measure 'Abaixo de 60 s' = DIVIDE ( SUM ( fato_linha[abaixo_60s] ), SUM ( fato_linha[n] ) )
+		formatString: 0.0%
+		displayFolder: Base
+		lineageTag: 0cbf5b0c-1034-5b62-a553-fd1ab901a954
+
+	/// Parte da espera extra que some se o onibus atrasado passasse no meio do caminho entre os dois.
+	measure 'Corte sem colagem' = DIVIDE ( SUM ( fato_linha[reducao] ), SUM ( fato_linha[dev2] ) )
+		formatString: 0.0%
+		displayFolder: Base
+		lineageTag: 4d8fa3b3-8665-5093-a3f9-c1e08f6036db
+
+	/// Quantidade de intervalos colados.
+	measure 'Intervalos colados' = SUM ( fato_linha[colados] )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: e09f6b0f-5ff8-5e86-9af1-13502bab39f6
+
+	/// Colados com o intervalo anterior nao colado.
+	measure 'Pares colados' = SUM ( fato_linha[pares] )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: c65e78a9-e39d-5b80-9966-fe777914bdf0
+
+	/// Colados no primeiro intervalo do grupo.
+	measure 'Colado no início' = SUM ( fato_linha[pulo_primeiro] )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: cffa51c4-2dc4-5c52-b6c9-1cf5d42b0cda
+
+	/// Terceiro onibus em diante de um comboio.
+	measure 'Colado atrás de colado' = SUM ( fato_linha[pulo_colado] )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 33fbba70-dd64-54a2-bc05-8e4800f43802
+
+	/// Quanto o erro de estimar a hora de passagem infla a espera extra (min).
+	measure 'Viés de interpolação' = DIVIDE ( SUM ( fato_linha[var_n] ), SUM ( fato_linha[soma] ) ) / 60
+		formatString: 0.000
+		displayFolder: Base
+		lineageTag: 1a2415ba-f82e-512c-8494-cae1045db195
+
+	/// Vies de interpolacao como parte da espera extra.
+	measure 'Viés de interpolação %' = DIVIDE ( SUM ( fato_linha[var_n] ), SUM ( fato_linha[dev2] ) / 2 )
+		formatString: 0.0%
+		displayFolder: Base
+		lineageTag: 9fad3bdb-9022-5e57-8b0a-f2f3102dd1d5
+
+	/// Espera media no ponto (min).
+	measure 'Espera média' = [Espera regular] + [Espera extra]
+		formatString: 0.00
+		displayFolder: Leitura
+		lineageTag: e4430aee-d58f-5f06-8659-b79300f7aa7b
+
+	/// Espera extra sobre a espera regular.
+	measure 'Custo da irregularidade' = DIVIDE ( [Espera extra], [Espera regular] )
+		formatString: +0%;-0%;0%
+		displayFolder: Leitura
+		lineageTag: 527b346e-6b29-58ad-98c4-f4cefe7995fd
+
+	/// Dos colados, quantos sao o 3o onibus em diante (fora da conta do corte).
+	measure 'Colados atrás de colado %' = DIVIDE ( [Colado atrás de colado], [Pares colados] + [Colado no início] + [Colado atrás de colado] )
+		formatString: 0.0%
+		displayFolder: Leitura
+		lineageTag: fb5aeefe-628b-523a-ba5e-d3b0521109bb
+
+	/// Linhas com intervalo medido no recorte.
+	measure 'Linhas medidas' = DISTINCTCOUNT ( fato_linha[route_id] )
+		formatString: #,0
+		displayFolder: Leitura
+		lineageTag: 14bcb5d8-06a1-5fc7-9a2b-9009dd8d4987
+
+	/// Dias com intervalo medido no recorte.
+	measure 'Dias medidos' = DISTINCTCOUNT ( fato_linha[data_bh] )
+		formatString: #,0
+		displayFolder: Leitura
+		lineageTag: a2c34384-d467-5dd3-aaae-15f915fa0b76
+
+	/// Volume da rede inteira no recorte, sem o filtro de linha.
+	measure 'Volume da rede' = CALCULATE ( [Volume], REMOVEFILTERS ( dim_linha ) )
+		formatString: #,0
+		displayFolder: Leitura
+		lineageTag: e5822c17-7e28-5522-bee0-0e43fd77b0ad
+
+	/// Parte da espera extra da rede que esta na linha (ou no recorte).
+	measure 'Parte da espera extra' = DIVIDE ( [Volume], [Volume da rede] )
+		formatString: 0.0%
+		displayFolder: Leitura
+		lineageTag: 3c2aa095-180c-5488-9a02-b1992d92c684
+
+	/// Posicao da linha pelo volume, entre todas as linhas da rede no recorte.
+	measure 'Posição' =
+			VAR v = [Volume]
+			RETURN
+			    IF ( NOT ISBLANK ( v ) && HASONEVALUE ( dim_linha[route_id] ),
+			        COUNTROWS ( FILTER ( ALL ( dim_linha ), [Volume] > v ) ) + 1 )
+		formatString: 0
+		displayFolder: Leitura
+		lineageTag: 7d1d1f69-22ad-59f2-8709-84f7fe67d59e
+
+	/// Linhas com espera medida no recorte, sem o filtro de linha.
+	measure 'Linhas na rede' = COUNTROWS ( FILTER ( ALL ( dim_linha ), NOT ISBLANK ( [Volume] ) ) )
+		formatString: 0
+		displayFolder: Leitura
+		lineageTag: b5073ea2-9f18-5423-bc3f-5c5e45cd55f2
+
+	/// Posicao no ranking em texto: 12a de 311.
+	measure 'Posição texto' = IF ( NOT ISBLANK ( [Posição] ), FORMAT ( [Posição], "0" ) & "ª de " & FORMAT ( [Linhas na rede], "0" ) )
+		displayFolder: Leitura
+		lineageTag: 65d30f25-b2ff-54cf-bcac-12e43a3458f9
+
+	/// Menor numero de linhas que somam 80% da espera extra da rede (ordem pelo volume).
+	measure 'Linhas para 80%' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_linha ), "@v", [Volume] ), NOT ISBLANK ( [@v] ) )
+			VAR tot = SUMX ( t, [@v] )
+			VAR t2 = ADDCOLUMNS ( t, "@antes", VAR x = [@v] RETURN SUMX ( FILTER ( t, [@v] > x ), [@v] ) )
+			RETURN
+			    IF ( tot > 0, COUNTROWS ( FILTER ( t2, [@antes] < 0.8 * tot ) ) )
+		formatString: 0
+		displayFolder: Leitura
+		lineageTag: 2d791a3d-ab04-5e29-8bde-45d78ad81884
+
+	/// Linhas para 80% sobre as linhas da rede.
+	measure 'Linhas para 80% %' = DIVIDE ( [Linhas para 80%], [Linhas na rede] )
+		formatString: 0%
+		displayFolder: Leitura
+		lineageTag: 2ddfa76b-933e-5fb6-9825-af4725336b39
+
+	/// Parte da espera extra somada desta linha para cima no ranking (curva de Pareto).
+	measure 'Parte acumulada' =
+			VAR v = [Volume]
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_linha ), "@v", [Volume] ), NOT ISBLANK ( [@v] ) )
+			VAR tot = SUMX ( t, [@v] )
+			RETURN
+			    IF ( NOT ISBLANK ( v ) && HASONEVALUE ( dim_linha[route_id] ),
+			        DIVIDE ( SUMX ( FILTER ( t, [@v] >= v ), [@v] ), tot ) )
+		formatString: 0%
+		displayFolder: Leitura
+		lineageTag: 1c4fde3c-c86c-5bf5-9226-c77e920d63cf
+
+	/// Parte da espera extra so das linhas do grafico de concentracao (as do 80% e mais 15).
+	measure 'Pareto parte' = IF ( [Posição] <= [Linhas para 80%] + 15, [Parte da espera extra] )
+		formatString: 0.0%
+		isHidden
+		displayFolder: Leitura
+		lineageTag: 4915a045-bc68-5a4a-92db-247951be862f
+
+	/// Parte acumulada so das linhas do grafico de concentracao.
+	measure 'Pareto acumulada' = IF ( [Posição] <= [Linhas para 80%] + 15, [Parte acumulada] )
+		formatString: 0%
+		isHidden
+		displayFolder: Leitura
+		lineageTag: d5044fc2-0fe0-5703-b94a-1fb0f29c0a27
+
+	/// Referencia de 80% no grafico de concentracao.
+	measure 'Linha de 80%' = IF ( NOT ISBLANK ( [Pareto parte] ), 0.8 )
+		formatString: 0%
+		isHidden
+		displayFolder: Leitura
+		lineageTag: 8dcfa1cc-04c9-5484-8286-badd929651c8
+
+	/// Espera extra so nas 30 linhas de maior volume (mapa de calor linha x faixa).
+	measure 'Calor top' = IF ( [Posição] <= 30, [Espera extra] )
+		formatString: 0.0
+		displayFolder: Leitura
+		lineageTag: 9f270fff-4c1f-5856-a764-af43cbc0b7e6
+
+	/// Dias de calendario no periodo.
+	measure 'Dias no período' =
+			VAR ini = MIN ( dim_data[data] )
+			VAR fim = MAX ( dim_data[data] )
+			RETURN IF ( NOT ISBLANK ( ini ), INT ( fim - ini ) + 1 )
+		formatString: 0
+		displayFolder: Comparação
+		lineageTag: db0baf25-460c-5889-9640-a59fc0a1b115
+
+	/// Espera extra nos dias logo antes do periodo, com o mesmo numero de dias. Em branco se faltar dado.
+	measure 'Espera extra anterior' =
+			VAR ini = MIN ( dim_data[data] )
+			VAR fim = MAX ( dim_data[data] )
+			VAR n = INT ( fim - ini ) + 1
+			VAR primeiro = CALCULATE ( MIN ( dim_data[data] ), REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+			RETURN
+			    IF ( ini - n >= primeiro,
+			        CALCULATE ( [Espera extra], REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ),
+			            dim_data[data] >= ini - n, dim_data[data] <= ini - 1 ) )
+		formatString: 0.00
+		displayFolder: Comparação
+		lineageTag: 36c7bafb-194f-52d6-945e-84fff1cce692
+
+	/// Espera extra menos a do periodo anterior (min).
+	measure 'Δ espera extra' =
+			VAR a = [Espera extra anterior]
+			RETURN IF ( NOT ISBLANK ( a ), [Espera extra] - a )
+		formatString: +0.00;-0.00;0.00
+		displayFolder: Comparação
+		lineageTag: 90584f31-51c6-5031-8e79-9e353dd8f8ae
+
+	/// Variacao da espera extra contra o periodo anterior, em texto.
+	measure 'Texto da variação' =
+			VAR d = [Δ espera extra]
+			RETURN
+			    IF ( ISBLANK ( d ), "Sem período anterior completo para comparar",
+			        IF ( d > 0, "▲ +", "▼ −" ) & FORMAT ( ABS ( d ), "0.00" ) & " min contra os "
+			            & [Dias no período] & " dias anteriores" )
+		displayFolder: Comparação
+		lineageTag: 8c0ea6cb-9224-5c61-8678-ffccb398e4d0
+
+	/// Vermelho quando a espera extra subiu, verde quando caiu.
+	measure 'Cor da variação' = IF ( [Δ espera extra] > 0, "#FF6B6B", IF ( [Δ espera extra] < 0, "#42D392", "#C9D0E4" ) )
+		isHidden
+		displayFolder: Cores
+		lineageTag: bedffc0f-4cc5-56ba-ad31-3ae07e88ed9f
+
+	/// A espera extra do recorte, para o numero grande da capa.
+	measure 'Espera extra texto' = IF ( NOT ISBLANK ( [Espera extra] ), "+" & FORMAT ( [Espera extra], "0.00" ) & " min" )
+		displayFolder: Textos
+		lineageTag: 502b1eb1-3edf-5350-a8e7-a480ea77b03c
+
+	/// Filtros em vigor, em uma linha.
+	measure Recorte =
+			VAR ini = MIN ( dim_data[data] )
+			VAR fim = MAX ( dim_data[data] )
+			VAR tipo = IF ( HASONEVALUE ( dim_tipo_dia[tipo] ), LOWER ( VALUES ( dim_tipo_dia[tipo] ) ), "todos os dias" )
+			VAR freq = IF ( HASONEVALUE ( dim_frequencia[frequencia] ),
+			    IF ( VALUES ( dim_frequencia[frequencia] ) = "alta", "alta frequência", "baixa frequência" ), "todas as frequências" )
+			VAR nl = COUNTROWS ( VALUES ( dim_linha[route_id] ) )
+			VAR linhas = IF ( ISFILTERED ( dim_linha ), FORMAT ( nl, "0" ) & IF ( nl = 1, " linha escolhida", " linhas escolhidas" ), "rede inteira" )
+			RETURN
+			    UPPER ( FORMAT ( ini, "dd/mm" ) & " a " & FORMAT ( fim, "dd/mm" ) & "  ·  " & tipo & "  ·  " & freq & "  ·  " & linhas )
+		displayFolder: Textos
+		lineageTag: 3f59d1e3-4a15-5d3c-b6df-5e22773edec9
+
+	/// Frase da capa.
+	measure 'Frase da espera' =
+			IF ( NOT ISBLANK ( [Espera média] ),
+			    "Quem chega ao ponto espera em média " & FORMAT ( [Espera média], "0.0" ) & " min pelo ônibus. "
+			    & "Com os mesmos ônibus em intervalos iguais, seriam " & FORMAT ( [Espera regular], "0.0" ) & " min." )
+		displayFolder: Textos
+		lineageTag: 007480a9-56c2-53ed-ac64-8de6f3aa8865
+
+	/// Selo do cabecalho: ultimo dia com dado e hora da ultima exportacao (horario de BH).
+	measure 'Dados até' =
+			VAR ate = MAX ( cargas[ate] )
+			VAR quando = MAX ( cargas[carregado_em] )
+			RETURN "DADOS ATÉ " & FORMAT ( ate, "dd/mm/yyyy" ) & "  ·  CARGA " & FORMAT ( quando, "dd/mm hh:nn" )
+		displayFolder: Textos
+		lineageTag: 07e61066-ddcb-5e6d-ba8a-9f1d9e7f42e2
+
+	/// Nome da linha em foco (ficha e dica).
+	measure 'Nome da linha' = IF ( HASONEVALUE ( dim_linha[route_id] ), VALUES ( dim_linha[route_long_name] ) )
+		displayFolder: Textos
+		lineageTag: 9e98043f-1cc9-536b-ab68-a60a9d18bbd8
+
+	/// Codigo da linha em foco.
+	measure 'Linha em foco' = IF ( HASONEVALUE ( dim_linha[route_id] ), "LINHA " & VALUES ( dim_linha[route_id] ) )
+		displayFolder: Textos
+		lineageTag: 89c21cf2-e47a-5ba3-9470-0f9906bbe260
+
+	/// Legenda do numero da concentracao.
+	measure 'Texto 80%' =
+			"de " & FORMAT ( [Linhas na rede], "0" ) & " linhas somam 80% da espera extra da rede ("
+			    & FORMAT ( [Linhas para 80% %], "0%" ) & " das linhas)"
+		displayFolder: Textos
+		lineageTag: d9637c5a-57ae-5605-9244-c5cd072372e3
+
+	/// Evento achado em noticias, ou falha de GPS das linhas S, no dia.
+	measure 'Evento do dia' =
+			IF ( HASONEVALUE ( dim_data[data] ),
+			    VAR e = VALUES ( dim_data[evento] )
+			    VAR f = VALUES ( dim_data[falha_gps_s] )
+			    RETURN IF ( e <> "", e, IF ( f, "GPS das suplementares falhou em parte do dia" ) ) )
+		displayFolder: Textos
+		lineageTag: 6a2379e1-75cb-5dd9-b603-baf8421806b1
+
+	/// Espera extra so nos dias com evento: vira coluna dourada no grafico dia a dia.
+	measure 'Marca de evento' = IF ( HASONEVALUE ( dim_data[data] ) && VALUES ( dim_data[evento] ) <> "", [Espera extra] )
+		formatString: 0.00
+		displayFolder: Textos
+		lineageTag: a2d77531-e97a-5c31-9d0c-2b1203a8af51
+
+	/// Espera extra em texto, com losango nos dias de evento (calendario).
+	measure 'Calor texto' =
+			VAR v = [Espera extra]
+			VAR e = IF ( HASONEVALUE ( dim_data[data] ), VALUES ( dim_data[evento] ) )
+			RETURN IF ( NOT ISBLANK ( v ), FORMAT ( v, "0.0" ) & IF ( e <> "", " ◆" ) )
+		displayFolder: Textos
+		lineageTag: 42babedd-81f4-5597-bbc3-9fbd4314ded7
+
+	/// Texto do mapa de calor linha x faixa.
+	measure 'Calor top texto' =
+			VAR v = [Calor top]
+			RETURN IF ( NOT ISBLANK ( v ), FORMAT ( v, "0.0" ) )
+		displayFolder: Textos
+		lineageTag: 3e770307-9e2b-5010-a5c4-11d5922e1e8a
+
+	/// Espera extra da linha em cada dia do periodo, separada por ponto e virgula (vazio no dia sem dado). Alimenta a linha do cartao do carrossel.
+	measure 'Carrossel tendência' =
+			IF ( NOT ISBLANK ( [Volume] ),
+			    CONCATENATEX ( VALUES ( dim_data[data] ),
+			        VAR v = [Espera extra]
+			        RETURN IF ( ISBLANK ( v ), "", FORMAT ( v, "0.000", "en-US" ) ),
+			        ";", dim_data[data], ASC ) )
+		isHidden
+		displayFolder: Carrossel
+		lineageTag: 590670e0-d078-5dab-86db-cdf503e161d7
+
+	/// Numeros da rede inteira para o cartao Rede inteira do carrossel: espera media; espera extra; colados; corte; linhas; inicio; fim | espera extra por dia. Ignora o filtro de linha.
+	measure 'Carrossel rede' =
+			IF ( NOT ISBLANK ( [Volume] ),
+			    CALCULATE (
+			        FORMAT ( [Espera média], "0.000", "en-US" ) & ";" & FORMAT ( [Espera extra], "0.000", "en-US" ) & ";"
+			            & FORMAT ( [Colados], "0.0000", "en-US" ) & ";" & FORMAT ( [Corte sem colagem], "0.0000", "en-US" ) & ";"
+			            & FORMAT ( [Linhas na rede], "0" ) & ";" & FORMAT ( MIN ( dim_data[data] ), "dd/mm" ) & ";"
+			            & FORMAT ( MAX ( dim_data[data] ), "dd/mm" ) & "|" & CONCATENATEX ( VALUES ( dim_data[data] ),
+			        VAR v = [Espera extra]
+			        RETURN IF ( ISBLANK ( v ), "", FORMAT ( v, "0.000", "en-US" ) ),
+			        ";", dim_data[data], ASC ),
+			        REMOVEFILTERS ( dim_linha ) ) )
+		isHidden
+		displayFolder: Carrossel
+		lineageTag: 9c52740d-5a80-5d9b-9345-fccc71b99149
+
+	/// Fundo do mapa de calor pela espera extra.
+	measure 'Cor do calor' =
+			VAR v = [Espera extra]
+			RETURN
+			    IF ( ISBLANK ( v ), BLANK (),
+			        SWITCH ( TRUE (),
+			            v < 0.5, "#18203A",
+			            v < 1.0, "#1F2B47",
+			            v < 1.5, "#2E3550",
+			            v < 2.0, "#4A3F4F",
+			            v < 2.5, "#6E4A45",
+			            v < 3.0, "#94563A",
+			            v < 3.5, "#B9652F",
+			            v < 4.5, "#DE7A2C",
+			            v < 6.0, "#F59A33",
+			            "#FFC15A"
+			        )
+			    )
+		isHidden
+		displayFolder: Cores
+		lineageTag: b49dfd5a-744b-5f84-9bf3-26a23cd8a1f1
+
+	/// Letra do mapa de calor.
+	measure 'Letra do calor' =
+			VAR v = [Espera extra]
+			RETURN
+			    IF ( ISBLANK ( v ), BLANK (),
+			        SWITCH ( TRUE (),
+			            v < 0.5, "#F4F6FB",
+			            v < 1.0, "#F4F6FB",
+			            v < 1.5, "#F4F6FB",
+			            v < 2.0, "#F4F6FB",
+			            v < 2.5, "#F4F6FB",
+			            v < 3.0, "#F4F6FB",
+			            v < 3.5, "#0A0E1C",
+			            v < 4.5, "#0A0E1C",
+			            v < 6.0, "#0A0E1C",
+			            "#0A0E1C"
+			        )
+			    )
+		isHidden
+		displayFolder: Cores
+		lineageTag: b88bcd94-da6a-5041-988e-912c1e46f9fc
+
+	/// Fundo do mapa linha x faixa.
+	measure 'Cor do calor top' =
+			VAR v = [Calor top]
+			RETURN
+			    IF ( ISBLANK ( v ), BLANK (),
+			        SWITCH ( TRUE (),
+			            v < 0.5, "#18203A",
+			            v < 1.0, "#1F2B47",
+			            v < 1.5, "#2E3550",
+			            v < 2.0, "#4A3F4F",
+			            v < 2.5, "#6E4A45",
+			            v < 3.0, "#94563A",
+			            v < 3.5, "#B9652F",
+			            v < 4.5, "#DE7A2C",
+			            v < 6.0, "#F59A33",
+			            "#FFC15A"
+			        )
+			    )
+		isHidden
+		displayFolder: Cores
+		lineageTag: badba419-4c10-5143-8fab-6b604b0ec483
+
+	/// Letra do mapa linha x faixa.
+	measure 'Letra do calor top' =
+			VAR v = [Calor top]
+			RETURN
+			    IF ( ISBLANK ( v ), BLANK (),
+			        SWITCH ( TRUE (),
+			            v < 0.5, "#F4F6FB",
+			            v < 1.0, "#F4F6FB",
+			            v < 1.5, "#F4F6FB",
+			            v < 2.0, "#F4F6FB",
+			            v < 2.5, "#F4F6FB",
+			            v < 3.0, "#F4F6FB",
+			            v < 3.5, "#0A0E1C",
+			            v < 4.5, "#0A0E1C",
+			            v < 6.0, "#0A0E1C",
+			            "#0A0E1C"
+			        )
+			    )
+		isHidden
+		displayFolder: Cores
+		lineageTag: 74f8469c-f14c-5d03-8067-e253c669516e
+
+	/// Vermelho: muitos colados e muita espera; ambar: espera alta sem colagem; azul: colados sem espera alta; cinza: abaixo da rede nas duas.
+	measure 'Cor do quadrante' =
+			VAR x = [Colados]
+			VAR y = [Espera extra]
+			VAR rx = CALCULATE ( [Colados], REMOVEFILTERS ( dim_linha ) )
+			VAR ry = CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_linha ) )
+			RETURN
+			    SWITCH ( TRUE (),
+			        x >= rx && y >= ry, "#FF6B6B",
+			        y >= ry, "#FFB347",
+			        x >= rx, "#6AA8FF",
+			        "#9AA3C2" )
+		isHidden
+		displayFolder: Cores
+		lineageTag: 736c9970-0048-54d1-8900-6b5877fc964c
+
+	/// Referencia vertical do grafico de quadrantes.
+	measure 'Colados da rede' = CALCULATE ( [Colados], REMOVEFILTERS ( dim_linha ) )
+		formatString: 0.0%
+		isHidden
+		displayFolder: Cores
+		lineageTag: b881b147-71a5-55a4-a60f-534721e2ffe0
+
+	/// Referencia horizontal do grafico de quadrantes.
+	measure 'Espera extra da rede' = CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_linha ) )
+		formatString: 0.00
+		isHidden
+		displayFolder: Cores
+		lineageTag: 99529b33-ffc1-5672-99e0-1d8ab551b1e5
+
+	/// Mini grafico da espera extra por dia no periodo (escala de 0 a 6 min ou ao maximo da linha). Tracejado: a rede.
+	measure 'Tendência' =
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@v", [Espera extra] ), NOT ISBLANK ( [@v] ) )
+			VAR d0 = MINX ( t, dim_data[data] )
+			VAR d1 = MAXX ( t, dim_data[data] )
+			VAR topo = MAX ( 6, MAXX ( t, [@v] ) )
+			VAR rede = CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_linha ) )
+			VAR yr = FORMAT ( 39 - DIVIDE ( rede, topo ) * 34, "0.0", "en-US" )
+			VAR pts = CONCATENATEX ( t,
+			        FORMAT ( 4 + DIVIDE ( INT ( dim_data[data] - d0 ), MAX ( 1, INT ( d1 - d0 ) ) ) * 212, "0.0", "en-US" ) & "," &
+			        FORMAT ( 39 - DIVIDE ( [@v], topo ) * 34, "0.0", "en-US" ),
+			        " ", dim_data[data], ASC )
+			VAR ultimo = MAXX ( TOPN ( 1, t, dim_data[data], DESC ), [@v] )
+			VAR yu = FORMAT ( 39 - DIVIDE ( ultimo, topo ) * 34, "0.0", "en-US" )
+			RETURN
+			    IF ( COUNTROWS ( t ) >= 2,
+			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='44' viewBox='0 0 220 44'>" & "<line x1='0' x2='220' y1='" & yr & "' y2='" & yr & "' stroke='%239AA3C2' stroke-width='1' stroke-dasharray='3 3'/>" & "<polyline points='" & pts & "' fill='none' stroke='%23FFB347' stroke-width='2.2' stroke-linejoin='round'/>" & "<circle cx='216' cy='" & yu & "' r='3.5' fill='%23FFB347'/>" & "</svg>" )
+		dataCategory: ImageUrl
+		displayFolder: SVG
+		lineageTag: 6d446c16-b14a-50cb-a337-660b6917cd5b
+
+	/// Espera extra no ponto, ultimos 28 dias (min).
+	measure 'Ponto · espera extra' = DIVIDE ( SUM ( fato_paradas[dev2] ), SUM ( fato_paradas[soma] ) ) / 2 / 60
+		formatString: 0.00
+		displayFolder: Pontos
+		lineageTag: d5d2c419-508e-5513-aaa6-4a0079eb5ec2
+
+	/// Espera regular no ponto (min).
+	measure 'Ponto · espera regular' = DIVIDE ( SUM ( fato_paradas[soma2_n] ), SUM ( fato_paradas[soma] ) ) / 2 / 60
+		formatString: 0.00
+		displayFolder: Pontos
+		lineageTag: 13dc8875-fd1e-50e5-8484-e08959118152
+
+	/// Colados no ponto.
+	measure 'Ponto · colados' = DIVIDE ( SUM ( fato_paradas[colados] ), SUM ( fato_paradas[n] ) )
+		formatString: 0.0%
+		displayFolder: Pontos
+		lineageTag: 6691698f-716e-5bbb-a4ad-ab7c409a4673
+
+	/// Horas de servico medidas no ponto.
+	measure 'Ponto · horas' = SUM ( fato_paradas[soma] ) / 3600
+		formatString: #,0
+		displayFolder: Pontos
+		lineageTag: 9ef7d727-bf77-5d13-bb15-75ff31a96b4b
+
+	/// Espera extra x horas no ponto.
+	measure 'Ponto · volume' = SUM ( fato_paradas[dev2] ) / 2 / 60 / 3600
+		formatString: #,0
+		displayFolder: Pontos
+		lineageTag: 54ad2b09-a091-5adc-9213-6b7f839c4027
+
+	/// Linhas que passam no ponto (maior contagem entre tipo de dia e frequencia).
+	measure 'Ponto · linhas' = MAX ( fato_paradas[linhas] )
+		formatString: 0
+		displayFolder: Pontos
+		lineageTag: ad062764-9e9e-595c-9e75-9de9c3607b4f
+
+	/// Espera extra so dos pontos com 25 horas ou mais (mapa e ranking).
+	measure 'Ponto · mapa espera' = IF ( HASONEVALUE ( fato_paradas[stop_id] ) && [Ponto · horas] >= 25, [Ponto · espera extra] )
+		formatString: 0.00
+		displayFolder: Pontos
+		lineageTag: 7d71172b-0112-5e44-99a8-eba9e7423c82
+
+	/// Latitude do ponto.
+	measure 'Ponto · latitude' = IF ( NOT ISBLANK ( [Ponto · mapa espera] ), MAX ( fato_paradas[stop_lat] ) )
+		formatString: 0.0000
+		displayFolder: Pontos
+		lineageTag: e1c0310c-529e-5e78-8151-df512298337e
+
+	/// Longitude do ponto.
+	measure 'Ponto · longitude' = IF ( NOT ISBLANK ( [Ponto · mapa espera] ), MAX ( fato_paradas[stop_lon] ) )
+		formatString: 0.0000
+		displayFolder: Pontos
+		lineageTag: 84355d52-1f97-56f7-b3a0-b49d27007f81
+
+	/// Pontos com 25 horas de servico ou mais na janela.
+	measure 'Pontos no mapa' = COUNTROWS ( FILTER ( VALUES ( fato_paradas[stop_id] ), CALCULATE ( SUM ( fato_paradas[soma] ) ) / 3600 >= 25 ) )
+		formatString: #,0
+		displayFolder: Pontos
+		lineageTag: acda03b8-8c20-53a8-93e3-8db30fa8f445
+
+	/// Parte da espera extra dos pontos do mapa que esta nos 10 piores.
+	measure 'Top 10 pontos parte' =
+			VAR t = ADDCOLUMNS ( FILTER ( VALUES ( fato_paradas[stop_id] ), CALCULATE ( SUM ( fato_paradas[soma] ) ) / 3600 >= 25 ), "@v", [Ponto · volume] )
+			RETURN DIVIDE ( SUMX ( TOPN ( 10, t, [@v], DESC ), [@v] ), SUMX ( t, [@v] ) )
+		formatString: 0.0%
+		displayFolder: Pontos
+		lineageTag: e1e9d26e-ff98-5376-9ddc-d589989b180b
+
+	/// Espera extra media dos pontos do mapa.
+	measure 'Ponto · espera extra rede' =
+			VAR t = FILTER ( VALUES ( fato_paradas[stop_id] ), CALCULATE ( SUM ( fato_paradas[soma] ) ) / 3600 >= 25 )
+			RETURN DIVIDE ( CALCULATE ( SUM ( fato_paradas[dev2] ), t ), CALCULATE ( SUM ( fato_paradas[soma] ), t ) ) / 2 / 60
+		formatString: 0.00
+		displayFolder: Pontos
+		lineageTag: 7cebaae4-b7e1-53a4-9eb5-f8cb933a371d
+
+	/// Janela de 28 dias dos pontos.
+	measure 'Janela dos pontos' = "DE " & FORMAT ( MIN ( fato_paradas[janela_ini] ), "dd/mm" ) & " A " & FORMAT ( MAX ( fato_paradas[janela_fim] ), "dd/mm" )
+		displayFolder: Pontos
+		lineageTag: a3279218-3944-51e4-9ef9-816374c3d529
+
+	/// Parte da espera extra dos pontos do mapa que esta no ponto.
+	measure 'Ponto · parte' =
+			VAR v = IF ( NOT ISBLANK ( [Ponto · mapa espera] ), [Ponto · volume] )
+			VAR tot = CALCULATE ( SUMX ( FILTER ( VALUES ( fato_paradas[stop_id] ), CALCULATE ( SUM ( fato_paradas[soma] ) ) / 3600 >= 25 ), [Ponto · volume] ), REMOVEFILTERS ( fato_paradas[stop_id], fato_paradas[stop_name] ) )
+			RETURN DIVIDE ( v, tot )
+		formatString: 0.0%
+		displayFolder: Pontos
+		lineageTag: 97ddcacc-bd9b-52f2-814e-9d604831d167
+
+	/// Cor do ponto no mapa.
+	measure 'Cor do ponto' =
+			VAR v = [Ponto · mapa espera]
+			RETURN
+			    IF ( ISBLANK ( v ), BLANK (),
+			        SWITCH ( TRUE (),
+			            v < 0.5, "#18203A",
+			            v < 1.0, "#1F2B47",
+			            v < 1.5, "#2E3550",
+			            v < 2.0, "#4A3F4F",
+			            v < 2.5, "#6E4A45",
+			            v < 3.0, "#94563A",
+			            v < 3.5, "#B9652F",
+			            v < 4.5, "#DE7A2C",
+			            v < 6.0, "#F59A33",
+			            "#FFC15A"
+			        )
+			    )
+		isHidden
+		displayFolder: Cores
+		lineageTag: 326d54c6-55a1-5726-93f7-0f77abdb9ec3
+
+	/// Intervalos medidos na classe.
+	measure 'Intervalos na classe' = SUM ( fato_hist[headways] )
+		formatString: #,0
+		displayFolder: Histograma
+		lineageTag: 29f1cd6a-f5c7-5dc7-8607-2304d8e45b9f
+
+	/// Parte dos intervalos na classe (o histograma nao separa por linha).
+	measure '% dos intervalos' = DIVIDE ( [Intervalos na classe], CALCULATE ( [Intervalos na classe], REMOVEFILTERS ( dim_classe ) ) )
+		formatString: 0.0%
+		displayFolder: Histograma
+		lineageTag: e6ed0fd1-e9bf-5dc0-933d-b6a0e4cbe932
+
+	/// Vermelho nos colados (menos de 1/4 do medio).
+	measure 'Cor da classe' = IF ( MAX ( dim_classe[classe] ) < 5, "#FF6B6B", "#6AA8FF" )
+		isHidden
+		displayFolder: Cores
+		lineageTag: bd559922-ed73-5845-a877-99ae2b52fa66
+
+	/// Alertas no teste (fora da amostra). Ignora o filtro de periodo: o teste foi feito uma vez.
+	measure Alertas = CALCULATE ( SUM ( fato_previsao[alertas] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+		formatString: #,0
+		displayFolder: Previsão
+		lineageTag: 7436fc73-03c5-595e-806d-e69dcc80c8e8
+
+	/// Alertas que chegaram colados.
+	measure Acertos = CALCULATE ( SUM ( fato_previsao[acertos] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+		formatString: #,0
+		displayFolder: Previsão
+		lineageTag: 133a12db-56aa-5eca-8352-47098767d6ff
+
+	/// Onibus que chegaram colados.
+	measure Positivos = CALCULATE ( SUM ( fato_previsao[positivos] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+		formatString: #,0
+		displayFolder: Previsão
+		lineageTag: c39f820d-3a12-5e37-8566-7214052fa3dc
+
+	/// Passagens avaliadas.
+	measure Exemplos = CALCULATE ( SUM ( fato_previsao[exemplos] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+		formatString: #,0
+		displayFolder: Previsão
+		lineageTag: 45f68662-5d01-5940-8b8b-e04f464c6f71
+
+	/// Precisao: dos alertas, quantos acertaram.
+	measure 'Acerto dos alertas' = DIVIDE ( [Acertos], [Alertas] )
+		formatString: 0.0%
+		displayFolder: Previsão
+		lineageTag: 7509ad00-6324-50ca-8688-792565f99a93
+
+	/// Revocacao: dos colados, quantos foram avisados.
+	measure 'Colados avisados' = DIVIDE ( [Acertos], [Positivos] )
+		formatString: 0.0%
+		displayFolder: Previsão
+		lineageTag: e123d323-feda-53cf-bbaa-ee6c3ecb9212
+
+	/// Chance de um onibus qualquer chegar colado (base).
+	measure 'Chance sem modelo' = DIVIDE ( [Positivos], [Exemplos] )
+		formatString: 0.0%
+		displayFolder: Previsão
+		lineageTag: 0940030e-bcca-50ff-a9ca-debb461a8f11
+
+	/// Limiar fixado na validacao.
+	measure Limiar = CALCULATE ( MAX ( fato_previsao[limiar] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+		formatString: 0.000
+		displayFolder: Previsão
+		lineageTag: 5eeab369-1370-5f83-855b-3ecf526715ba
+
+	/// Janela e limiar do teste.
+	measure 'Janela do teste' =
+			VAR a = CALCULATE ( MIN ( fato_previsao[data_bh] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+			VAR b = CALCULATE ( MAX ( fato_previsao[data_bh] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) )
+			RETURN "TESTE DE " & FORMAT ( a, "dd/mm" ) & " A " & FORMAT ( b, "dd/mm" ) & "  ·  LIMIAR " & FORMAT ( [Limiar], "0.000" )
+		displayFolder: Previsão
+		lineageTag: 2d657638-def6-5245-a2c8-2d422b18ad36
+
+	/// Alertas por dia do teste. Tira so a coluna do periodo: REMOVEFILTERS ( sel_periodo ) levaria junto o filtro de dim_data (tabela expandida).
+	measure 'Alertas no dia' = CALCULATE ( SUM ( fato_previsao[alertas] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo[periodo] ) )
+		formatString: #,0
+		isHidden
+		displayFolder: Previsão
+		lineageTag: 181c1bba-8c7b-5fe1-9532-49287e474809
+
+	/// Acertos por dia do teste.
+	measure 'Acertos no dia' = CALCULATE ( SUM ( fato_previsao[acertos] ), fato_previsao[conjunto] = "teste", REMOVEFILTERS ( sel_periodo[periodo] ) )
+		formatString: #,0
+		isHidden
+		displayFolder: Previsão
+		lineageTag: 1f5dad26-2491-54ce-92f2-06892825a719
+
+	/// Acerto dos alertas em cada dia do teste.
+	measure 'Acerto no dia' = DIVIDE ( [Acertos no dia], [Alertas no dia] )
+		formatString: 0%
+		isHidden
+		displayFolder: Previsão
+		lineageTag: 98f7b44a-51b6-5045-987f-612791448469
+
+	/// Quantas vezes o acerto dos alertas supera a chance de um onibus qualquer chegar colado.
+	measure 'Vezes a chance' = DIVIDE ( [Acerto dos alertas], [Chance sem modelo] )
+		formatString: 0.0
+		displayFolder: Previsão
+		lineageTag: d5e1c6e4-abcb-5adf-94a1-6935ab5849a4
+
+	/// Leitura do teste do modelo, montada com as medidas.
+	measure 'Frase do modelo' =
+			"Dos " & FORMAT ( [Alertas], "#,0" ) & " alertas, " & FORMAT ( [Acertos], "#,0" ) & " chegaram colados ("
+			    & FORMAT ( [Acerto dos alertas], "0%" ) & "). Sem modelo, a chance de um ônibus chegar colado é de "
+			    & FORMAT ( [Chance sem modelo], "0%" ) & ". Uso sugerido: lista de prioridade para o controle."
+		displayFolder: Previsão
+		lineageTag: ced2ae64-d2cd-5d79-bfe9-ba21dd43dd49
+
+	/// Intervalos validos por passagem reconstruida (cobertura_passagens da Gold, reagregada).
+	measure Cobertura = DIVIDE ( SUM ( fato_qualidade[headways_validos] ), SUM ( fato_qualidade[passagens] ) )
+		formatString: 0.0%
+		displayFolder: Qualidade
+		lineageTag: 7f527558-d89e-56a4-9027-4ff5f743a006
+
+	/// Intervalos que atravessam uma parada do feed (descartados).
+	measure 'Feed parado' = SUM ( fato_qualidade[headways_feed_parado] )
+		formatString: #,0
+		displayFolder: Qualidade
+		lineageTag: fa23642f-f3ee-5e02-a13b-6899f5553533
+
+	/// Passagens de onibus por ponto reconstruidas.
+	measure Passagens = SUM ( fato_qualidade[passagens] )
+		formatString: #,0
+		displayFolder: Qualidade
+		lineageTag: 69cc03c1-3a27-59ed-9b7d-374dc6000113
+
+	/// Intervalos descartados com o feed parado, sobre todos os intervalos reconstruidos.
+	measure 'Feed parado %' = DIVIDE ( [Feed parado], SUM ( fato_qualidade[headways] ) )
+		formatString: 0.0%
+		displayFolder: Qualidade
+		lineageTag: d5efc6a6-9eb2-5b0d-91ee-3251f1c02f31
+
+	/// Dias com algum intervalo descartado por feed parado.
+	measure 'Dias com feed parado' = COUNTROWS ( FILTER ( VALUES ( dim_data[data] ), [Feed parado] > 0 ) )
+		formatString: 0
+		displayFolder: Qualidade
+		lineageTag: 55fbf492-cb9d-5348-a7fb-a7fbe0221e60
+
+	/// Dias com medida de qualidade no recorte.
+	measure 'Dias com qualidade' = COUNTROWS ( FILTER ( VALUES ( dim_data[data] ), NOT ISBLANK ( [Passagens] ) ) )
+		formatString: 0
+		displayFolder: Qualidade
+		lineageTag: 67de0101-bfaf-507a-9606-656a4b24c768
+
+	/// Vies de interpolacao em minutos e em parte da espera extra.
+	measure 'Viés texto' = IF ( NOT ISBLANK ( [Viés de interpolação] ), FORMAT ( [Viés de interpolação], "0.000" ) & " min · " & FORMAT ( [Viés de interpolação %], "0.0%" ) )
+		displayFolder: Qualidade
+		lineageTag: 84eca09c-3da9-5266-8b06-6d82e2f41f54
+
+	/// Parte dos pares colados que o controle conseguiria espacar (padrao 50%).
+	measure 'Espaçamento' = SELECTEDVALUE ( sel_espacamento[espacamento], 0.5 )
+		formatString: 0%
+		displayFolder: Simulador
+		lineageTag: a050b687-6877-5641-9c1b-3a24aa4f97ba
+
+	/// Espera extra se essa parte dos pares colados passasse no meio do caminho.
+	measure 'Espera extra simulada' = DIVIDE ( SUM ( fato_linha[dev2] ) - [Espaçamento] * SUM ( fato_linha[reducao] ), SUM ( fato_linha[soma] ) ) / 2 / 60
+		formatString: 0.00
+		displayFolder: Simulador
+		lineageTag: e8ec6d92-be98-5acd-87f3-0f5851b87faa
+
+	/// Minutos a menos de espera por ida ao ponto.
+	measure 'Ganho por passageiro' = [Espera extra] - [Espera extra simulada]
+		formatString: 0.00
+		displayFolder: Simulador
+		lineageTag: 5a431cc2-fb77-5ba5-85f6-0f03f419bbc3
+
+	/// Ganho sobre a espera media no ponto.
+	measure 'Ganho % da espera' = DIVIDE ( [Ganho por passageiro], [Espera média] )
+		formatString: 0.0%
+		displayFolder: Simulador
+		lineageTag: d1b942dd-3b85-57d4-b555-d7261672fa3d
+
+	/// Espera media simulada.
+	measure 'Espera média simulada' = [Espera regular] + [Espera extra simulada]
+		formatString: 0.00
+		displayFolder: Simulador
+		lineageTag: e36c8ae6-451e-5f6e-a4cf-d16abf338068
+
+	/// Volume de espera extra que sai (min x h).
+	measure 'Volume poupado' = [Espaçamento] * SUM ( fato_linha[reducao] ) / 2 / 60 / 3600
+		formatString: #,0
+		displayFolder: Simulador
+		lineageTag: 87971b4f-9529-52ab-8ed2-9ca71831a824
+
+	/// Parte do ganho da rede que vem da linha.
+	measure 'Parte do ganho' = DIVIDE ( [Volume poupado], CALCULATE ( [Volume poupado], REMOVEFILTERS ( dim_linha ) ) )
+		formatString: 0.0%
+		displayFolder: Simulador
+		lineageTag: 3e4a459d-17ba-5417-8de7-22f7c6628450
+
+	/// Frase do simulador.
+	measure 'Texto do simulador' =
+			"Espaçando " & FORMAT ( [Espaçamento], "0%" ) & " dos pares colados, a espera extra cai de "
+			    & FORMAT ( [Espera extra], "0.00" ) & " para " & FORMAT ( [Espera extra simulada], "0.00" ) & " min"
+		displayFolder: Simulador
+		lineageTag: ed369b43-51cf-5284-92f6-bc54a645ce43
+
+	/// Minutos a menos por ida ao ponto se todos os pares colados fossem espacados (o simulador em 100%).
+	measure 'Ganho sem colagem' = [Espera extra] * [Corte sem colagem]
+		formatString: 0.00
+		displayFolder: Onde agir
+		lineageTag: 5e03f85d-f2d3-5646-a289-42e7fd4ef34c
+
+	/// Espera extra da rede inteira no recorte, sem o filtro de linha.
+	measure 'Espera extra da rede no recorte' = CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_linha ) )
+		formatString: 0.00
+		displayFolder: Onde agir
+		lineageTag: 3f0cedb7-2cbb-58c6-910b-1cc3d57a3e0c
+
+	/// Capa da visao geral: espera extra, frase, variacao e ilustracao.
+	measure 'HTML capa' =
+			VAR ee = [Espera extra]
+			VAR er = [Espera regular]
+			VAR em = ee + er
+			VAR d = [Δ espera extra]
+			VAR corv = IF ( d > 0, "#FF6B6B", IF ( d < 0, "#42D392", "#C9D0E4" ) )
+			VAR wr = DIVIDE ( er, em ) * 372
+			RETURN
+			    IF ( ISBLANK ( ee ), "<div style='width:100%;height:100%;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #FFB347 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #FFB347 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #FFB347 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1100 400' width='100%' height='100%'><text x='550' y='200' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #FFB347 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #FFB347 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #FFB347 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1116 416' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='44' y='62' font-size='17' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='2.6'>ESPERA EXTRA POR IDA AO PONTO</text><text x='668' y='146' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.8'>OS MESMOS ÔNIBUS, DE DOIS JEITOS</text><text x='668' y='178' font-size='15' font-weight='700' fill='#FFB347' text-anchor='start' letter-spacing='1.6'>HOJE: EM GRUPOS</text><clipPath id='pista178'><rect x='668' y='188' width='372' height='50' rx='12'/></clipPath><rect x='668' y='188' width='372' height='50' rx='12' fill='#0A0E1C' stroke='#2A3456'/><line x1='676' x2='1032' y1='213' y2='213' stroke='#2A3456' stroke-width='2' stroke-dasharray='14 12'/><rect x='899' y='188' width='3' height='50' fill='#F4F6FB' fill-opacity='.8'/><g clip-path='url(#pista178)'><g><g transform='translate(296.0,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(668.0,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(329.5,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(701.5,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(363.0,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(735.0,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(396.4,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(768.4,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(500.6,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(872.6,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(534.1,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(906.1,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(567.6,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(939.6,198) scale(1.15)'><rect width='27' height='17' rx='4' fill='#FFB347'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><animateTransform attributeName='transform' type='translate' from='0 0' to='372 0' dur='15s' repeatCount='indefinite'/></g></g><text x='668' y='262' font-size='15' font-weight='700' fill='#6AA8FF' text-anchor='start' letter-spacing='1.6'>INTERVALOS IGUAIS</text><clipPath id='pista262'><rect x='668' y='272' width='372' height='50' rx='12'/></clipPath><rect x='668' y='272' width='372' height='50' rx='12' fill='#0A0E1C' stroke='#2A3456'/><line x1='676' x2='1032' y1='297' y2='297' stroke='#2A3456' stroke-width='2' stroke-dasharray='14 12'/><rect x='899' y='272' width='3' height='50' fill='#F4F6FB' fill-opacity='.8'/><g clip-path='url(#pista262)'><g><g transform='translate(296.0,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(668.0,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(349.1,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(721.1,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(402.3,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(774.3,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(455.4,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(827.4,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(508.6,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(880.6,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(561.7,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(933.7,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(614.9,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><g transform='translate(986.9,282) scale(1.15)'><rect width='27' height='17' rx='4' fill='#6AA8FF'/><rect x='4' y='3.5' width='17' height='5' rx='1.5' fill='#0A0E1C' fill-opacity='.7'/><circle cx='6.5' cy='18' r='2.8' fill='#F4F6FB'/><circle cx='20.5' cy='18' r='2.8' fill='#F4F6FB'/></g><animateTransform attributeName='transform' type='translate' from='0 0' to='372 0' dur='15s' repeatCount='indefinite'/></g></g><text x='900.14' y='170' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>o ponto</text><text x='44' y='94' font-size='16' font-weight='600' fill='#FFB347' text-anchor='start' letter-spacing='1.2'>"
+			    & ( [Recorte] )
+			    & "</text><text x='34' y='238' font-size='150' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( ee, "0.00" ) )
+			    & "<tspan font-size='48' dx='12'>min</tspan></text><text x='44' y='290' font-size='24' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>de espera <tspan fill='#FFB347'>a mais</tspan> em cada ida ao ponto,</text><text x='44' y='322' font-size='22' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>só porque os ônibus não passam em intervalos iguais</text><rect x='44' y='346' width='486' height='38' rx='19' fill-opacity='.14' fill='"
+			    & ( corv )
+			    & "' stroke='"
+			    & ( corv )
+			    & "'/><text x='66' y='371' font-size='18' font-weight='600' font-family='Segoe UI, sans-serif' fill='"
+			    & ( corv )
+			    & "'>"
+			    & ( [Texto da variação] )
+			    & "</text><text x='668' y='360' font-size='15' font-weight='700' fill='#C9D0E4' letter-spacing='1.6'>ESPERA MÉDIA NO PONTO: "
+			    & ( FORMAT ( em, "0.0" ) )
+			    & " MIN</text><rect x='668' y='370' width='"
+			    & ( FORMAT ( wr, "0.0", "en-US" ) )
+			    & "' height='26' rx='4' fill='#6AA8FF'/><rect x='"
+			    & ( FORMAT ( 668 + wr, "0.0", "en-US" ) )
+			    & "' y='370' width='"
+			    & ( FORMAT ( 372 - wr, "0.0", "en-US" ) )
+			    & "' height='26' rx='4' fill='#FFB347'/><text x='678' y='389' font-size='16' font-weight='700' fill='#0A0E1C'>"
+			    & ( FORMAT ( er, "0.0" ) )
+			    & " regular</text><text x='"
+			    & ( FORMAT ( 668 + wr + (372 - wr) / 2, "0.0", "en-US" ) )
+			    & "' y='389' font-size='16' font-weight='700' fill='#0A0E1C' text-anchor='middle'>+"
+			    & ( FORMAT ( ee, "0.0" ) )
+			    & "</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 4d0afdfa-3d62-5d65-a1ed-76a1fc996954
+
+	/// Azulejos com o tamanho da medicao.
+	measure 'HTML números' =
+			IF ( ISBLANK ( [Intervalos] ), "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 288' width='100%' height='100%'><text x='292' y='144' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 304' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<rect x='0' y='0' width='284' height='136' rx='16' fill='#182038' stroke='#2A3456'/><rect x='0' y='18' width='4' height='100' rx='2' fill='#FF6B6B'/><text x='22' y='34' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>INTERVALOS COLADOS</text><text x='20' y='92' font-size='52' font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [Colados], "0.0%" ) )
+			    & "</text><text x='22' y='120' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>menos de 1/4 do intervalo médio</text><rect x='300' y='0' width='284' height='136' rx='16' fill='#182038' stroke='#2A3456'/><rect x='300' y='18' width='4' height='100' rx='2' fill='#42D392'/><text x='322' y='34' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>CORTE SEM COLAGEM</text><text x='320' y='92' font-size='52' font-weight='700' fill='#42D392'>"
+			    & ( FORMAT ( [Corte sem colagem], "0%" ) )
+			    & "</text><text x='322' y='120' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>da espera extra sumiria</text><rect x='0' y='152' width='284' height='136' rx='16' fill='#182038' stroke='#2A3456'/><rect x='0' y='170' width='4' height='100' rx='2' fill='#6AA8FF'/><text x='22' y='186' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>INTERVALOS MEDIDOS</text><text x='20' y='244' font-size='52' font-weight='700' fill='#6AA8FF'>"
+			    & ( VAR v = [Intervalos] RETURN IF ( v >= 1000000, FORMAT ( v / 1000000, "0.0" ) & " mi", IF ( v >= 1000, FORMAT ( v / 1000, "0" ) & " mil", FORMAT ( v, "0" ) ) ) )
+			    & "</text><text x='22' y='272' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>entre ônibus da mesma linha</text><rect x='300' y='152' width='284' height='136' rx='16' fill='#182038' stroke='#2A3456'/><rect x='300' y='170' width='4' height='100' rx='2' fill='#F4F6FB'/><text x='322' y='186' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>LINHAS MEDIDAS</text><text x='320' y='244' font-size='52' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [Linhas medidas], "0" ) )
+			    & "</text><text x='322' y='272' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>com intervalo no recorte</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 07c13534-5a4a-5843-807a-e98c06c5105d
+
+	/// Espera extra por dia, media do periodo e eventos numerados.
+	measure 'HTML dia a dia' =
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@v", [Espera extra],
+			        "@e", CALCULATE ( MAX ( dim_data[evento] ) ) ), NOT ISBLANK ( [@v] ) )
+			VAR d0 = MINX ( t, dim_data[data] )
+			VAR d1 = MAXX ( t, dim_data[data] )
+			VAR n = INT ( d1 - d0 ) + 1
+			VAR med = [Espera extra]
+			VAR topo = MAX ( 2, CEILING ( MAXX ( t, [@v] ) * 1.3, 1 ) )
+			VAR passo = IF ( topo <= 5, 1, 2 )
+			VAR bw = 574 / n
+			VAR ym = 292 - med / topo * 262
+			VAR evd = FILTER ( eventos, eventos[evento] <> "" && eventos[data] >= d0 && eventos[data] <= d1 )
+			VAR ev = ADDCOLUMNS ( SUMMARIZE ( evd, eventos[evento], eventos[evento_l1], eventos[evento_l2],
+			        eventos[evento_l3], eventos[evento_n] ),
+			        "@d", VAR e = eventos[evento] RETURN MINX ( FILTER ( evd, eventos[evento] = e ), eventos[data] ) )
+			VAR ev2 = ADDCOLUMNS ( ev, "@i", RANKX ( ev, [@d], , ASC, DENSE ) )
+			VAR ev3 = ADDCOLUMNS ( ev2, "@y", VAR dd = [@d]
+			        RETURN 51 + SUMX ( FILTER ( ev2, [@d] < dd ), eventos[evento_n] * 19 + 12 ) )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1048 354' width='100%' height='100%'><text x='524' y='177' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1064 370' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( GENERATESERIES ( passo, topo, passo ),
+			        VAR yg = 292 - [Value] / topo * 262
+			        RETURN "<line x1='50' x2='624' y1='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-dasharray='4 6'/><text x='40' y='"
+			    & ( FORMAT ( yg + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( [Value], "0" ) )
+			    & "</text>", "" ) )
+			    & "<line x1='50' x2='624' y1='292' y2='292' stroke='#9AA3C2'/><text x='40' y='297' font-size='15' fill='#9AA3C2' text-anchor='end'>0</text>"
+			    & ( CONCATENATEX ( t,
+			        VAR i = INT ( dim_data[data] - d0 )
+			        VAR x = 50 + i * bw + bw * 0.14
+			        VAR hb = DIVIDE ( [@v], topo ) * 262
+			        VAR e = [@e]
+			        VAR tem = e <> ""
+			        VAR k = MAXX ( FILTER ( ev2, eventos[evento] = e ), [@i] )
+			        VAR primeiro = tem && dim_data[data] = MAXX ( FILTER ( ev2, eventos[evento] = e ), [@d] )
+			        VAR cy = IF ( MOD ( k, 2 ) = 1, 44, 74 )
+			        RETURN "<rect x='"
+			    & ( FORMAT ( x, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 292 - hb, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( bw * 0.72, "0.0", "en-US" ) )
+			    & "' height='"
+			    & ( FORMAT ( hb, "0.0", "en-US" ) )
+			    & "' rx='2' fill='"
+			    & ( IF ( tem, "#F4F6FB", "#FFB347" ) )
+			    & "'/>"
+			    & ( IF ( primeiro, "<line x1='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' y1='"
+			    & ( FORMAT ( 292 - hb - 3, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( cy + 12, "0.0", "en-US" ) )
+			    & "' stroke='#F4F6FB' stroke-opacity='.45' stroke-dasharray='2 3'/><circle cx='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( cy, "0.0", "en-US" ) )
+			    & "' r='12' fill='#F4F6FB'/><text x='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( cy + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#0A0E1C' text-anchor='middle'>"
+			    & ( FORMAT ( k, "0" ) )
+			    & "</text>" ) ), "", dim_data[data], ASC ) )
+			    & "<line x1='50' x2='624' y1='"
+			    & ( FORMAT ( ym, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( ym, "0.0", "en-US" ) )
+			    & "' stroke='#6AA8FF' stroke-width='2' stroke-dasharray='8 6'/><line x1='50' x2='80' y1='10' y2='10' stroke='#6AA8FF' stroke-width='2' stroke-dasharray='8 6'/><text x='90' y='16' font-size='16' font-weight='600' fill='#6AA8FF'>média do período: "
+			    & ( FORMAT ( med, "0.00" ) )
+			    & " min</text>"
+			    & ( CONCATENATEX ( FILTER ( t, n <= 10 || WEEKDAY ( dim_data[data], 2 ) = 1 ),
+			        VAR xd = 50 + INT ( dim_data[data] - d0 ) * bw + bw / 2
+			        RETURN "<text x='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' y='320' font-size='16' fill='#C9D0E4' text-anchor='middle'>"
+			    & ( FORMAT ( dim_data[data], "dd/mm" ) )
+			    & "</text><line x1='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' y1='292' y2='299' stroke='#9AA3C2'/>", "" ) )
+			    & "<text x='50' y='350' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( IF ( n <= 10, "dias do período", "datas: as segundas-feiras" ) )
+			    & "</text><text x='660' y='20' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>EVENTOS NA CIDADE</text>"
+			    & ( IF ( COUNTROWS ( ev2 ) = 0,
+			        "<text x='660' y='60' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Nenhum evento anotado no período</text>",
+			        CONCATENATEX ( FILTER ( ev3, [@y] + ( eventos[evento_n] - 1 ) * 19 <= 348 ),
+			            VAR y = [@y]
+			            RETURN "<circle cx='673' cy='"
+			    & ( FORMAT ( y - 6, "0.0", "en-US" ) )
+			    & "' r='13' fill='#F4F6FB'/><text x='673' y='"
+			    & ( FORMAT ( y - 1, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#0A0E1C' text-anchor='middle'>"
+			    & ( FORMAT ( [@i], "0" ) )
+			    & "</text><text x='696' y='"
+			    & ( FORMAT ( y, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [@d], "dd/mm" ) )
+			    & "</text><text x='748' y='"
+			    & ( FORMAT ( y, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( eventos[evento_l1], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='748' y='"
+			    & ( FORMAT ( y + 19, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( eventos[evento_l2], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='748' y='"
+			    & ( FORMAT ( y + 38, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( eventos[evento_l3], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text>", "", [@d], ASC ) ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 5a34c9b6-e697-5282-a106-22fb4043a91a
+
+	/// Espera regular e extra por faixa horaria.
+	measure 'HTML faixa' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_faixa[faixa], dim_faixa[horas], dim_faixa[ordem] ),
+			        "@r", [Espera regular], "@x", [Espera extra] ), NOT ISBLANK ( [@x] ) )
+			VAR topo = MAXX ( t, [@r] + [@x] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 354' width='100%' height='100%'><text x='292' y='177' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 370' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( t,
+			        VAR y = ( dim_faixa[ordem] - 1 ) * 59
+			        VAR wr = DIVIDE ( [@r], topo ) * 268
+			        VAR wx = DIVIDE ( [@x], topo ) * 268
+			        RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 22, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_faixa[faixa] )
+			    & "</text><text x='0' y='"
+			    & ( FORMAT ( y + 43, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_faixa[horas] )
+			    & "</text><rect x='170' y='"
+			    & ( FORMAT ( y + 12, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( wr, "0.0", "en-US" ) )
+			    & "' height='26' rx='4' fill='#6AA8FF'/><rect x='"
+			    & ( FORMAT ( 170 + wr, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 12, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( wx, "0.0", "en-US" ) )
+			    & "' height='26' rx='4' fill='#FFB347'/><text x='584' y='"
+			    & ( FORMAT ( y + 24, "0.0", "en-US" ) )
+			    & "' font-size='21' font-weight='700' fill='#FFB347' text-anchor='end'>+"
+			    & ( FORMAT ( [@x], "0.00" ) )
+			    & "</text><text x='584' y='"
+			    & ( FORMAT ( y + 44, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' text-anchor='end' font-family='Segoe UI, sans-serif'>de "
+			    & ( FORMAT ( [@r] + [@x], "0.0" ) )
+			    & " min</text>", "", dim_faixa[ordem], ASC ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 775d75c8-a587-50dd-98d6-112afe51129f
+
+	/// As 30 linhas de maior volume x faixa horaria.
+	measure 'HTML calor linha faixa' =
+			VAR t = TOPN ( 30, FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@v", [Volume], "@e", [Espera extra] ),
+			        NOT ISBLANK ( [@v] ) ), [@v], DESC, dim_linha[route_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@e] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( t, [@e] > _v || ( [@e] = _v && dim_linha[route_id] < _c ) ) ) + 1 )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 948 770' width='100%' height='100%'><text x='474' y='385' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 964 786' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='167' y='18' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Madrugada</text><text x='167' y='37' font-size='13' font-weight='400' fill='#9AA3C2' text-anchor='middle'>0h às 5h</text><text x='309' y='18' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Início da manhã</text><text x='309' y='37' font-size='13' font-weight='400' fill='#9AA3C2' text-anchor='middle'>5h às 6h</text><text x='451' y='18' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Pico da manhã</text><text x='451' y='37' font-size='13' font-weight='400' fill='#9AA3C2' text-anchor='middle'>6h às 9h</text><text x='593' y='18' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Entre picos</text><text x='593' y='37' font-size='13' font-weight='400' fill='#9AA3C2' text-anchor='middle'>9h às 16h</text><text x='735' y='18' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Pico da tarde</text><text x='735' y='37' font-size='13' font-weight='400' fill='#9AA3C2' text-anchor='middle'>16h às 20h</text><text x='877' y='18' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Noite</text><text x='877' y='37' font-size='13' font-weight='400' fill='#9AA3C2' text-anchor='middle'>20h às 24h</text>"
+			    & ( CONCATENATEX ( r, VAR y = 50 + ( [@k] - 1 ) * 22.27 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 16.1, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#F4F6FB'>"
+			    & ( dim_linha[route_id] )
+			    & "</text>"
+			    & ( CONCATENATEX ( ALL ( dim_faixa[ordem] ), VAR v = [Espera extra] RETURN IF ( ISBLANK ( v ), "", "<rect x='"
+			    & ( FORMAT ( 96 + ( dim_faixa[ordem] - 1 ) * 142.00 + 2, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 2, "0.0", "en-US" ) )
+			    & "' width='138.0' height='18.3' rx='4' fill='"
+			    & ( SWITCH ( TRUE (), v < 0.5, "#18203A", v < 1.0, "#1F2B47", v < 1.5, "#2E3550", v < 2.0, "#4A3F4F", v < 2.5, "#6E4A45", v < 3.0, "#94563A", v < 3.5, "#B9652F", v < 4.5, "#DE7A2C", v < 6.0, "#F59A33", "#FFC15A" ) )
+			    & "'/><text x='"
+			    & ( FORMAT ( 96 + ( dim_faixa[ordem] - 1 ) * 142.00 + 71.0, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 16.2, "0.0", "en-US" ) )
+			    & "' font-size='14' font-weight='600' text-anchor='middle' fill='"
+			    & ( IF ( v < 3.0, "#F4F6FB", "#0A0E1C" ) )
+			    & "'>"
+			    & ( FORMAT ( v, "0.0" ) )
+			    & "</text>" ), "" ) ), "" ) )
+			    & "<text x='0' y='748' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>ESPERA EXTRA (MIN)</text><rect x='176' y='735' width='30' height='14' rx='3' fill='#18203A' stroke='#2A3456' stroke-width='.8'/><text x='176' y='764' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>0</text><rect x='208' y='735' width='30' height='14' rx='3' fill='#1F2B47' stroke='#2A3456' stroke-width='.8'/><rect x='240' y='735' width='30' height='14' rx='3' fill='#2E3550' stroke='#2A3456' stroke-width='.8'/><text x='240' y='764' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>1</text><rect x='272' y='735' width='30' height='14' rx='3' fill='#4A3F4F' stroke='#2A3456' stroke-width='.8'/><rect x='304' y='735' width='30' height='14' rx='3' fill='#6E4A45' stroke='#2A3456' stroke-width='.8'/><text x='304' y='764' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>2</text><rect x='336' y='735' width='30' height='14' rx='3' fill='#94563A' stroke='#2A3456' stroke-width='.8'/><rect x='368' y='735' width='30' height='14' rx='3' fill='#B9652F' stroke='#2A3456' stroke-width='.8'/><text x='368' y='764' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>3</text><rect x='400' y='735' width='30' height='14' rx='3' fill='#DE7A2C' stroke='#2A3456' stroke-width='.8'/><rect x='432' y='735' width='30' height='14' rx='3' fill='#F59A33' stroke='#2A3456' stroke-width='.8'/><text x='432' y='764' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>4,5</text><rect x='464' y='735' width='30' height='14' rx='3' fill='#FFC15A' stroke='#2A3456' stroke-width='.8'/><text x='464' y='764' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>6+</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 326d3742-c80a-55c6-a597-1e9ae6b613bf
+
+	/// Espera extra dia a dia em semanas, com eventos.
+	measure 'HTML calendário' =
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@v", [Espera extra],
+			        "@e", CALCULATE ( MAX ( dim_data[evento] ) ), "@s", CALCULATE ( MAX ( dim_data[semana] ) ),
+			        "@w", WEEKDAY ( dim_data[data], 2 ) ), NOT ISBLANK ( [@v] ) )
+			VAR s0 = MINX ( t, [@s] )
+			VAR nw = INT ( ( MAXX ( t, [@s] ) - s0 ) / 7 ) + 1
+			VAR rh = MIN ( 60, 302 / nw )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 684 382' width='100%' height='100%'><text x='342' y='191' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 700 398' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='20' font-size='12' font-weight='700' fill='#9AA3C2' text-anchor='start' letter-spacing='1.2'>SEMANA</text><text x='121' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Seg</text><text x='208' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Ter</text><text x='294' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Qua</text><text x='381' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Qui</text><text x='468' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Sex</text><text x='554' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Sáb</text><text x='641' y='20' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Dom</text>"
+			    & ( CONCATENATEX ( DISTINCT ( SELECTCOLUMNS ( t, "@s", [@s] ) ), VAR y = 30 + INT ( ( [@s] - s0 ) / 7 ) * rh RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + rh / 2 + 6, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4'>"
+			    & ( FORMAT ( [@s], "dd/mm" ) )
+			    & "</text>", "" ) )
+			    & ( CONCATENATEX ( t, VAR x = 78 + ( [@w] - 1 ) * 86.57 VAR y = 30 + INT ( ( [@s] - s0 ) / 7 ) * rh VAR v = [@v] RETURN "<g>"
+			    & ( IF ( [@e] <> "", "<title>" & SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( [@e], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) & "</title>" ) )
+			    & "<rect x='"
+			    & ( FORMAT ( x + 2, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 2, "0.0", "en-US" ) )
+			    & "' width='82.6' height='"
+			    & ( FORMAT ( rh - 4, "0.0", "en-US" ) )
+			    & "' rx='5' fill='"
+			    & ( SWITCH ( TRUE (), v < 0.5, "#18203A", v < 1.0, "#1F2B47", v < 1.5, "#2E3550", v < 2.0, "#4A3F4F", v < 2.5, "#6E4A45", v < 3.0, "#94563A", v < 3.5, "#B9652F", v < 4.5, "#DE7A2C", v < 6.0, "#F59A33", "#FFC15A" ) )
+			    & "'/><text x='"
+			    & ( FORMAT ( x + 43.3, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + rh / 2 + 7, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' text-anchor='middle' fill='"
+			    & ( IF ( v < 3.0, "#F4F6FB", "#0A0E1C" ) )
+			    & "'>"
+			    & ( FORMAT ( v, "0.0" ) )
+			    & "</text><text x='"
+			    & ( FORMAT ( x + 8, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 16, "0.0", "en-US" ) )
+			    & "' font-size='12' fill-opacity='.7' fill='"
+			    & ( IF ( v < 3.0, "#F4F6FB", "#0A0E1C" ) )
+			    & "'>"
+			    & ( FORMAT ( dim_data[data], "dd" ) )
+			    & "</text>"
+			    & ( IF ( [@e] <> "", "<circle cx='"
+			    & ( FORMAT ( x + 74.6, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( y + 12, "0.0", "en-US" ) )
+			    & "' r='5' fill='#F4F6FB' stroke='#0A0E1C' stroke-width='1.5'/>" ) )
+			    & "</g>", "" ) )
+			    & "<rect x='0' y='347' width='26' height='14' rx='3' fill='#18203A' stroke='#2A3456' stroke-width='.8'/><text x='0' y='376' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>0</text><rect x='28' y='347' width='26' height='14' rx='3' fill='#1F2B47' stroke='#2A3456' stroke-width='.8'/><rect x='56' y='347' width='26' height='14' rx='3' fill='#2E3550' stroke='#2A3456' stroke-width='.8'/><text x='56' y='376' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>1</text><rect x='84' y='347' width='26' height='14' rx='3' fill='#4A3F4F' stroke='#2A3456' stroke-width='.8'/><rect x='112' y='347' width='26' height='14' rx='3' fill='#6E4A45' stroke='#2A3456' stroke-width='.8'/><text x='112' y='376' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>2</text><rect x='140' y='347' width='26' height='14' rx='3' fill='#94563A' stroke='#2A3456' stroke-width='.8'/><rect x='168' y='347' width='26' height='14' rx='3' fill='#B9652F' stroke='#2A3456' stroke-width='.8'/><text x='168' y='376' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>3</text><rect x='196' y='347' width='26' height='14' rx='3' fill='#DE7A2C' stroke='#2A3456' stroke-width='.8'/><rect x='224' y='347' width='26' height='14' rx='3' fill='#F59A33' stroke='#2A3456' stroke-width='.8'/><text x='224' y='376' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>4,5</text><rect x='252' y='347' width='26' height='14' rx='3' fill='#FFC15A' stroke='#2A3456' stroke-width='.8'/><text x='252' y='376' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>6+</text><circle cx='377' cy='359' r='6' fill='#F4F6FB' stroke='#0A0E1C'/><text x='391' y='364' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>dia com evento na cidade (passe o mouse)</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 3077505b-6539-52dd-a5e8-88078b72067d
+
+	/// Espera extra por dia da semana e faixa horaria.
+	measure 'HTML semana faixa' =
+			IF ( ISBLANK ( [Espera extra] ), "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 684 260' width='100%' height='100%'><text x='342' y='130' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 700 276' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='108' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Madrugada</text><text x='108' y='35' font-size='12' font-weight='400' fill='#9AA3C2' text-anchor='middle'>0h às 5h</text><text x='213' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Início da manhã</text><text x='213' y='35' font-size='12' font-weight='400' fill='#9AA3C2' text-anchor='middle'>5h às 6h</text><text x='318' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Pico da manhã</text><text x='318' y='35' font-size='12' font-weight='400' fill='#9AA3C2' text-anchor='middle'>6h às 9h</text><text x='422' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Entre picos</text><text x='422' y='35' font-size='12' font-weight='400' fill='#9AA3C2' text-anchor='middle'>9h às 16h</text><text x='527' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Pico da tarde</text><text x='527' y='35' font-size='12' font-weight='400' fill='#9AA3C2' text-anchor='middle'>16h às 20h</text><text x='632' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>Noite</text><text x='632' y='35' font-size='12' font-weight='400' fill='#9AA3C2' text-anchor='middle'>20h às 24h</text>"
+			    & ( CONCATENATEX ( ALL ( dim_data[dia_semana_ordem], dim_data[dia_semana] ),
+			        VAR y = 44 + ( dim_data[dia_semana_ordem] - 1 ) * 30.86 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 21.4, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#C9D0E4'>"
+			    & ( dim_data[dia_semana] )
+			    & "</text>"
+			    & ( CONCATENATEX ( ALL ( dim_faixa[ordem] ), VAR v = [Espera extra] RETURN IF ( ISBLANK ( v ), "", "<rect x='"
+			    & ( FORMAT ( 56 + ( dim_faixa[ordem] - 1 ) * 104.67 + 2, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 2, "0.0", "en-US" ) )
+			    & "' width='100.7' height='26.9' rx='4' fill='"
+			    & ( SWITCH ( TRUE (), v < 0.5, "#18203A", v < 1.0, "#1F2B47", v < 1.5, "#2E3550", v < 2.0, "#4A3F4F", v < 2.5, "#6E4A45", v < 3.0, "#94563A", v < 3.5, "#B9652F", v < 4.5, "#DE7A2C", v < 6.0, "#F59A33", "#FFC15A" ) )
+			    & "'/><text x='"
+			    & ( FORMAT ( 56 + ( dim_faixa[ordem] - 1 ) * 104.67 + 52.3, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 20.8, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='600' text-anchor='middle' fill='"
+			    & ( IF ( v < 3.0, "#F4F6FB", "#0A0E1C" ) )
+			    & "'>"
+			    & ( FORMAT ( v, "0.0" ) )
+			    & "</text>" ), "" ) ), "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 224820a1-32b1-520c-bd2b-c9b9e2aeabd8
+
+	/// Linhas que somam 80% e a curva acumulada.
+	measure 'HTML concentração' =
+			VAR n80 = [Linhas para 80%]
+			VAR lr = [Linhas na rede]
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@v", [Volume], "@p", [Parte da espera extra],
+			        "@a", [Parte acumulada] ), NOT ISBLANK ( [@v] ) )
+			VAR r = FILTER ( ADDCOLUMNS ( t, "@k", VAR _v = [@v] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( t, [@v] > _v || ( [@v] = _v && dim_linha[route_id] < _c ) ) ) + 1 ), [@k] <= n80 + 15 )
+			VAR bw = 1236 / MAX ( 1, COUNTROWS ( r ) )
+			VAR pmax = MAXX ( r, [@p] )
+			RETURN
+			    IF ( COUNTROWS ( r ) = 0 || ISBLANK ( n80 ), "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1700 282' width='100%' height='100%'><text x='850' y='141' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1716 298' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='122' font-size='120' font-weight='700' fill='#FFB347'>"
+			    & ( FORMAT ( n80, "0" ) )
+			    & "</text><text x='4' y='164' font-size='24' font-weight='700' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>linhas somam 80%</text><text x='4' y='194' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>da espera extra da rede</text><text x='4' y='228' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>são "
+			    & ( FORMAT ( [Linhas para 80% %], "0%" ) )
+			    & " das "
+			    & ( FORMAT ( lr, "0" ) )
+			    & " linhas medidas</text><rect x='400' y='4' width='15' height='15' rx='3' fill='#FFB347'/><text x='423' y='16' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>parte de cada linha na espera extra da rede</text><rect x='775' y='4' width='15' height='15' rx='3' fill='#9AA3C2'/><text x='798' y='16' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>as 15 seguintes</text><line x1='940' x2='968' y1='11' y2='11' stroke='#F4F6FB' stroke-width='2.5'/><text x='976' y='16' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>soma acumulada (eixo à direita)</text><line x1='400' x2='1636' y1='141.0' y2='141.0' stroke='#2A3456' stroke-opacity='1' stroke-dasharray='6 6'/><text x='1646' y='146' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start'>50%</text><line x1='400' x2='1636' y1='84.0' y2='84.0' stroke='#F4F6FB' stroke-opacity='0.55' stroke-dasharray='6 6'/><text x='1646' y='89' font-size='15' font-weight='700' fill='#F4F6FB' text-anchor='start'>80%</text><line x1='400' x2='1636' y1='46.0' y2='46.0' stroke='#2A3456' stroke-opacity='1' stroke-dasharray='6 6'/><text x='1646' y='51' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start'>100%</text><line x1='400' x2='1636' y1='236' y2='236' stroke='#9AA3C2'/><text x='1646' y='241' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start'>0%</text>"
+			    & ( CONCATENATEX ( r, VAR x = 400 + ( [@k] - 1 ) * bw VAR hb = [@p] / pmax * 114 RETURN "<rect x='"
+			    & ( FORMAT ( x + bw * 0.1, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 236 - hb, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( bw * 0.8, "0.0", "en-US" ) )
+			    & "' height='"
+			    & ( FORMAT ( hb, "0.0", "en-US" ) )
+			    & "' fill='"
+			    & ( IF ( [@k] <= n80, "#FFB347", "#9AA3C2" ) )
+			    & "' fill-opacity='"
+			    & ( IF ( [@k] <= n80, ".9", ".45" ) )
+			    & "'/>", "" ) )
+			    & "<polyline points='"
+			    & ( CONCATENATEX ( r, FORMAT ( 400 + ( [@k] - 0.5 ) * bw, "0.0", "en-US" ) & "," & FORMAT ( 236 - [@a] * 190, "0.0", "en-US" ), " ", [@k], ASC ) )
+			    & "' fill='none' stroke='#F4F6FB' stroke-width='2.5' stroke-linejoin='round'/><line x1='"
+			    & ( FORMAT ( 400 + n80 * bw, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( 400 + n80 * bw, "0.0", "en-US" ) )
+			    & "' y1='42' y2='236' stroke='#FFB347' stroke-width='2' stroke-dasharray='6 5'/><text x='"
+			    & ( FORMAT ( 400 + n80 * bw - 8, "0.0", "en-US" ) )
+			    & "' y='60' font-size='15' font-weight='700' fill='#FFB347' text-anchor='end'>até aqui, 80%</text>"
+			    & ( CONCATENATEX ( FILTER ( r, [@k] = 1 || MOD ( [@k], 25 ) = 0 ), VAR x = 400 + ( [@k] - 1 ) * bw RETURN "<text x='"
+			    & ( FORMAT ( x + bw / 2, "0.0", "en-US" ) )
+			    & "' y='258' font-size='14' fill='#9AA3C2' text-anchor='middle'>"
+			    & ( FORMAT ( [@k], "0" ) )
+			    & "ª</text>", "" ) )
+			    & "<text x='400' y='280' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>linhas na ordem do volume de espera extra (espera extra × horas de serviço) · a maior tem "
+			    & ( FORMAT ( pmax, "0.0%" ) )
+			    & " da rede</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 502256bf-cb8e-5516-b138-6824cc36202d
+
+	/// Colados contra espera extra por linha.
+	measure 'HTML quadrantes' =
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@x", [Colados], "@y", [Espera extra],
+			        "@h", [Horas de serviço], "@v", [Volume] ), NOT ISBLANK ( [@x] ) && NOT ISBLANK ( [@y] ) )
+			VAR rx = [Colados da rede]
+			VAR ry = [Espera extra da rede]
+			VAR mx = MAX ( rx * 2, PERCENTILEX.INC ( t, [@x], 0.98 ) * 1.1 )
+			VAR my = MAX ( ry * 2, PERCENTILEX.INC ( t, [@y], 0.98 ) * 1.1 )
+			VAR mh = MAXX ( t, [@h] )
+			VAR xr = 70 + rx / mx * 724
+			VAR yr = 284 - ry / my * 254
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 808 334' width='100%' height='100%'><text x='404' y='167' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 824 350' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<line x1='70' x2='794' y1='284' y2='284' stroke='#9AA3C2'/><line x1='70' x2='70' y1='30' y2='284' stroke='#9AA3C2'/><line x1='"
+			    & ( FORMAT ( xr, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( xr, "0.0", "en-US" ) )
+			    & "' y1='30' y2='284' stroke='#C9D0E4' stroke-opacity='.6' stroke-dasharray='6 5'/><line x1='70' x2='794' y1='"
+			    & ( FORMAT ( yr, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( yr, "0.0", "en-US" ) )
+			    & "' stroke='#C9D0E4' stroke-opacity='.6' stroke-dasharray='6 5'/>"
+			    & ( CONCATENATEX ( t, VAR px = 70 + MIN ( [@x] / mx, 1 ) * 724 VAR py = 284 - MIN ( [@y] / my, 1 ) * 254 VAR rr = 2.5 + 9 * SQRT ( DIVIDE ( [@h], mh ) ) RETURN "<circle cx='"
+			    & ( FORMAT ( px, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( py, "0.0", "en-US" ) )
+			    & "' r='"
+			    & ( FORMAT ( rr, "0.0", "en-US" ) )
+			    & "' fill='"
+			    & ( SWITCH ( TRUE (), [@x] >= rx && [@y] >= ry, "#FF6B6B", [@y] >= ry, "#FFB347", [@x] >= rx, "#6AA8FF", "#9AA3C2" ) )
+			    & "' fill-opacity='.72' stroke='#0A0E1C' stroke-width='.8'/>", "", [@h], DESC ) )
+			    & ( CONCATENATEX ( TOPN ( 5, t, [@v], DESC, dim_linha[route_id], ASC ), VAR px = 70 + MIN ( [@x] / mx, 1 ) * 724 VAR py = 284 - MIN ( [@y] / my, 1 ) * 254 VAR rr = 2.5 + 9 * SQRT ( DIVIDE ( [@h], mh ) ) RETURN "<text x='"
+			    & ( FORMAT ( px + rr + 4, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( py + 5, "0.0", "en-US" ) )
+			    & "' font-size='14' font-weight='700' fill='#F4F6FB' stroke='#0A0E1C' stroke-width='3' paint-order='stroke'>"
+			    & ( dim_linha[route_id] )
+			    & "</text>", "" ) )
+			    & "<text stroke='#0A0E1C' stroke-width='4' paint-order='stroke' x='788' y='46' font-size='14' font-weight='700' fill='#FF6B6B' text-anchor='end'>muito colado e muita espera</text><text stroke='#0A0E1C' stroke-width='4' paint-order='stroke' x='80' y='46' font-size='14' font-weight='700' fill='#FFB347' text-anchor='start'>espera alta, pouco colado</text><text stroke='#0A0E1C' stroke-width='4' paint-order='stroke' x='788' y='274' font-size='14' font-weight='700' fill='#6AA8FF' text-anchor='end'>muito colado, espera baixa</text><text stroke='#0A0E1C' stroke-width='4' paint-order='stroke' x='80' y='274' font-size='14' font-weight='700' fill='#9AA3C2' text-anchor='start'>abaixo da rede nas duas</text><text x='70' y='304' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='middle'>0%</text><text x='"
+			    & ( FORMAT ( xr, "0.0", "en-US" ) )
+			    & "' y='304' font-size='14' fill='#C9D0E4' text-anchor='middle'>rede "
+			    & ( FORMAT ( rx, "0.0%" ) )
+			    & "</text><text x='794' y='304' font-size='14' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( mx, "0%" ) )
+			    & "</text><text x='432' y='332' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>intervalos colados</text><text x='62' y='289' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>0</text><text x='62' y='"
+			    & ( FORMAT ( yr + 5, "0.0", "en-US" ) )
+			    & "' font-size='14' fill='#C9D0E4' text-anchor='end'>"
+			    & ( FORMAT ( ry, "0.0" ) )
+			    & "</text><text x='62' y='35' font-size='14' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( my, "0" ) )
+			    & "</text><text transform='translate(14,157) rotate(-90)' font-size='15' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>espera extra (min)</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 4dfaf3f9-1401-51ba-8cdc-1ecbd549722d
+
+	/// As 7 linhas de maior volume, com tendencia.
+	measure 'HTML ranking' =
+			VAR dd = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@x", [Espera extra] ), NOT ISBLANK ( [@x] ) )
+			VAR d0 = MINX ( dd, dim_data[data] )
+			VAR nd = MAX ( 1, INT ( MAXX ( dd, dim_data[data] ) - d0 ) )
+			VAR t = TOPN ( 7, FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@v", [Volume], "@pos", [Posição],
+			        "@p", [Parte da espera extra], "@e", [Espera extra], "@c", [Colados],
+			        "@nome", CALCULATE ( MAX ( dim_linha[route_long_name] ) ) ), NOT ISBLANK ( [@v] ) ),
+			        [@v], DESC, dim_linha[route_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@v] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( t, [@v] > _v || ( [@v] = _v && dim_linha[route_id] < _c ) ) ) + 1 )
+			VAR emax = MAXX ( t, [@e] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 824 334' width='100%' height='100%'><text x='412' y='167' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 840 350' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start'>#</text><text x='46' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.3'>LINHA</text><text x='300' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.3'>DIA A DIA</text><text x='540' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.3'>% DA REDE</text><text x='560' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.3'>ESPERA EXTRA (MIN)</text><text x='824' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.3'>COLADOS</text>"
+			    & ( CONCATENATEX ( r, VAR y = 30 + ( [@k] - 1 ) * 43.43
+			        VAR sd = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@d", [Espera extra] ), NOT ISBLANK ( [@d] ) )
+			        VAR st = MAX ( 6, MAXX ( sd, [@d] ) )
+			        RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 25, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#FFB347'>"
+			    & ( FORMAT ( [@pos], "0" ) )
+			    & "ª</text><text x='46' y='"
+			    & ( FORMAT ( y + 25, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#F4F6FB'>"
+			    & ( dim_linha[route_id] )
+			    & "</text><text x='112' y='"
+			    & ( FORMAT ( y + 25, "0.0", "en-US" ) )
+			    & "' font-size='14' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( IF ( LEN ( [@nome] ) > 24, LEFT ( [@nome], 23 ) & "…", [@nome] ), "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><polyline points='"
+			    & ( CONCATENATEX ( sd, FORMAT ( 300 + DIVIDE ( INT ( dim_data[data] - d0 ), nd ) * 150, "0.0", "en-US" ) & "," & FORMAT ( y + 35.4 - [@d] / st * 27.4, "0.0", "en-US" ), " ", dim_data[data], ASC ) )
+			    & "' fill='none' stroke='#FFB347' stroke-width='2' stroke-linejoin='round'/><text x='540' y='"
+			    & ( FORMAT ( y + 25, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#FFB347' text-anchor='end'>"
+			    & ( FORMAT ( [@p], "0.0%" ) )
+			    & "</text><rect x='560' y='"
+			    & ( FORMAT ( y + 14, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@e] / emax * 130, "0.0", "en-US" ) )
+			    & "' height='14' rx='3' fill='#FFB347'/><text x='"
+			    & ( FORMAT ( 566 + [@e] / emax * 130, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 26, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text><text x='824' y='"
+			    & ( FORMAT ( y + 25, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#FF6B6B' text-anchor='end'>"
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & "</text><line x1='0' x2='824' y1='"
+			    & ( FORMAT ( y + 43.4, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( y + 43.4, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-opacity='.6'/>", "", [@k], ASC ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 8b405b4b-dd72-5b6a-be1f-3cd3a2f59f79
+
+	/// Pontos de maior volume no mapa, os 10 piores numerados.
+	measure 'HTML mapa' =
+			VAR t0 = FILTER ( ADDCOLUMNS ( VALUES ( fato_paradas[stop_id] ), "@e", [Ponto · mapa espera],
+			        "@v", [Ponto · volume] ), NOT ISBLANK ( [@e] ) )
+			VAR t = TOPN ( 400, t0, [@v], DESC, fato_paradas[stop_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@v] VAR _c = fato_paradas[stop_id] RETURN COUNTROWS ( FILTER ( t, [@v] > _v || ( [@v] = _v && fato_paradas[stop_id] < _c ) ) ) + 1 )
+			VAR vmax = MAXX ( t, [@v] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 648 770' width='100%' height='100%'><text x='324' y='385' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 664 786' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<g transform='translate(626,18)'><path d='M0,-12 L7,6 L0,2 L-7,6 Z' fill='#C9D0E4'/><text y='22' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='middle'>N</text></g>"
+			    & ( CONCATENATEX ( r, VAR px = 324.0 + ( [Ponto · longitude] - ( -43.9625 ) ) * 2427.164 VAR py = ( -19.768 - [Ponto · latitude] ) * 2582.090 RETURN "<circle cx='"
+			    & ( FORMAT ( px, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( py, "0.0", "en-US" ) )
+			    & "' r='"
+			    & ( FORMAT ( 2.2 + 6 * SQRT ( DIVIDE ( [@v], vmax ) ), "0.0", "en-US" ) )
+			    & "' fill='"
+			    & ( SWITCH ( TRUE (), [@e] < 0.5, "#18203A", [@e] < 1.0, "#1F2B47", [@e] < 1.5, "#2E3550", [@e] < 2.0, "#4A3F4F", [@e] < 2.5, "#6E4A45", [@e] < 3.0, "#94563A", [@e] < 3.5, "#B9652F", [@e] < 4.5, "#DE7A2C", [@e] < 6.0, "#F59A33", "#FFC15A" ) )
+			    & "' stroke='#0A0E1C' stroke-width='.6'/>", "", [@e], ASC ) )
+			    & ( CONCATENATEX ( FILTER ( r, [@k] <= 10 ), VAR px = 324.0 + ( [Ponto · longitude] - ( -43.9625 ) ) * 2427.164 VAR py = ( -19.768 - [Ponto · latitude] ) * 2582.090 RETURN "<circle cx='"
+			    & ( FORMAT ( px, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( py, "0.0", "en-US" ) )
+			    & "' r='11' fill='#F4F6FB' stroke='#0A0E1C' stroke-width='2'/><text x='"
+			    & ( FORMAT ( px, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( py + 4.5, "0.0", "en-US" ) )
+			    & "' font-size='13' font-weight='700' fill='#0A0E1C' text-anchor='middle'>"
+			    & ( FORMAT ( [@k], "0" ) )
+			    & "</text>", "", [@k], DESC ) )
+			    & "<text x='0' y='722' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>ESPERA EXTRA (MIN)</text><rect x='176' y='709' width='28' height='14' rx='3' fill='#18203A' stroke='#2A3456' stroke-width='.8'/><text x='176' y='738' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>0</text><rect x='206' y='709' width='28' height='14' rx='3' fill='#1F2B47' stroke='#2A3456' stroke-width='.8'/><rect x='236' y='709' width='28' height='14' rx='3' fill='#2E3550' stroke='#2A3456' stroke-width='.8'/><text x='236' y='738' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>1</text><rect x='266' y='709' width='28' height='14' rx='3' fill='#4A3F4F' stroke='#2A3456' stroke-width='.8'/><rect x='296' y='709' width='28' height='14' rx='3' fill='#6E4A45' stroke='#2A3456' stroke-width='.8'/><text x='296' y='738' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>2</text><rect x='326' y='709' width='28' height='14' rx='3' fill='#94563A' stroke='#2A3456' stroke-width='.8'/><rect x='356' y='709' width='28' height='14' rx='3' fill='#B9652F' stroke='#2A3456' stroke-width='.8'/><text x='356' y='738' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>3</text><rect x='386' y='709' width='28' height='14' rx='3' fill='#DE7A2C' stroke='#2A3456' stroke-width='.8'/><rect x='416' y='709' width='28' height='14' rx='3' fill='#F59A33' stroke='#2A3456' stroke-width='.8'/><text x='416' y='738' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>4,5</text><rect x='446' y='709' width='28' height='14' rx='3' fill='#FFC15A' stroke='#2A3456' stroke-width='.8'/><text x='446' y='738' font-size='13' font-weight='600' fill='#9AA3C2' text-anchor='start'>6+</text><text x='0' y='762' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Os 400 de maior volume · tamanho: volume · nº: posição na tabela · cinza: demais pontos</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: e74e6e87-be46-5451-a947-f66cde7414b5
+
+	/// Numeros dos pontos do mapa.
+	measure 'HTML pontos números' =
+			IF ( ISBLANK ( [Pontos no mapa] ), "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 984 88' width='100%' height='100%'><text x='492' y='44' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1000 104' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='34' y='18' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>COM 25 H OU MAIS</text><text x='32' y='70' font-size='40' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [Pontos no mapa], "#,0" ) )
+			    & "</text><line x1='246' x2='246' y1='0' y2='80' stroke='#2A3456'/><text x='280' y='18' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>ESPERA EXTRA MÉDIA</text><text x='278' y='70' font-size='40' font-weight='700' fill='#FFB347'>"
+			    & ( FORMAT ( [Ponto · espera extra rede], "0.00" ) & " min" )
+			    & "</text><line x1='492' x2='492' y1='0' y2='80' stroke='#2A3456'/><text x='526' y='18' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>OS 10 PIORES SOMAM</text><text x='524' y='70' font-size='40' font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [Top 10 pontos parte], "0.0%" ) & " do total" )
+			    & "</text><line x1='738' x2='738' y1='0' y2='80' stroke='#2A3456'/><text x='772' y='18' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>JANELA</text><text x='770' y='70' font-size='40' font-weight='700' fill='#C9D0E4'>"
+			    & ( SUBSTITUTE ( LOWER ( [Janela dos pontos] ), "de ", "" ) )
+			    & "</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 751d6481-ef69-56cd-92cf-ef95cb30f5d4
+
+	/// Os 10 pontos de maior volume.
+	measure 'HTML piores pontos' =
+			VAR t0 = FILTER ( ADDCOLUMNS ( VALUES ( fato_paradas[stop_id] ), "@e", [Ponto · mapa espera],
+			        "@v", [Ponto · volume] ), NOT ISBLANK ( [@e] ) )
+			VAR t = TOPN ( 10, t0, [@v], DESC, fato_paradas[stop_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@v] VAR _c = fato_paradas[stop_id] RETURN COUNTROWS ( FILTER ( t, [@v] > _v || ( [@v] = _v && fato_paradas[stop_id] < _c ) ) ) + 1 )
+			VAR r10 = ADDCOLUMNS ( r, "@nome", CALCULATE ( MAX ( fato_paradas[stop_name] ) ), "@l", [Ponto · linhas],
+			        "@r", [Ponto · espera regular], "@c", [Ponto · colados], "@p", [Ponto · parte] )
+			VAR emax = MAXX ( r10, [@e] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 984 554' width='100%' height='100%'><text x='492' y='277' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1000 570' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>Nº</text><text x='44' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>CÓDIGO</text><text x='118' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>PONTO</text><text x='470' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>LINHAS</text><text x='568' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>REGULAR</text><text x='590' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>ESPERA EXTRA (MIN)</text><text x='880' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>COLADOS</text><text x='984' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>% DO TOTAL</text>"
+			    & ( CONCATENATEX ( r10, VAR y = 34 + ( [@k] - 1 ) * 52.00 RETURN "<circle cx='14' cy='"
+			    & ( FORMAT ( y + 26.0, "0.0", "en-US" ) )
+			    & "' r='14' fill='#F4F6FB'/><text x='14' y='"
+			    & ( FORMAT ( y + 31.0, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#0A0E1C' text-anchor='middle'>"
+			    & ( FORMAT ( [@k], "0" ) )
+			    & "</text><text x='44' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4'>"
+			    & ( fato_paradas[stop_id] )
+			    & "</text><text x='118' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='16' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( IF ( LEN ( [@nome] ) > 36, LEFT ( [@nome], 35 ) & "…", [@nome] ), "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='470' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='16' fill='#C9D0E4' text-anchor='end'>"
+			    & ( FORMAT ( [@l], "0" ) )
+			    & "</text><text x='568' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='16' fill='#6AA8FF' text-anchor='end'>"
+			    & ( FORMAT ( [@r], "0.00" ) )
+			    & "</text><rect x='590' y='"
+			    & ( FORMAT ( y + 19.0, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@e] / emax * 150, "0.0", "en-US" ) )
+			    & "' height='14' rx='3' fill='#FFB347'/><text x='"
+			    & ( FORMAT ( 598 + [@e] / emax * 150, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text><text x='880' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='16' fill='#FF6B6B' text-anchor='end'>"
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & "</text><text x='984' y='"
+			    & ( FORMAT ( y + 32.0, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#FFB347' text-anchor='end'>"
+			    & ( FORMAT ( [@p], "0.0%" ) )
+			    & "</text><line x1='0' x2='984' y1='"
+			    & ( FORMAT ( y + 52.0, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( y + 52.0, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-opacity='.6'/>", "", [@k], ASC ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 8220270e-0398-5f08-8ce0-3d1685387cdf
+
+	/// Colados, abaixo de 60 s, comboios e corte.
+	measure 'HTML colados números' =
+			IF ( ISBLANK ( [Intervalos] ), "<div style='width:100%;height:100%;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #FF6B6B 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #FF6B6B 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #FF6B6B 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1752 190' width='100%' height='100%'><text x='876' y='95' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #FF6B6B 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #FF6B6B 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #FF6B6B 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1768 206' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='34' y='52' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>INTERVALOS COLADOS</text><text x='32' y='126' font-size='64' font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [Colados], "0.0%" ) )
+			    & "</text><text x='34' y='162' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>menos de 1/4 do intervalo médio</text><line x1='438' x2='438' y1='30' y2='170' stroke='#2A3456'/><text x='472' y='52' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>ABAIXO DE 60 SEGUNDOS</text><text x='470' y='126' font-size='64' font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [Abaixo de 60 s], "0.0%" ) )
+			    & "</text><text x='472' y='162' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>dos intervalos: praticamente juntos</text><line x1='876' x2='876' y1='30' y2='170' stroke='#2A3456'/><text x='910' y='52' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>COMBOIOS</text><text x='908' y='126' font-size='64' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [Colados atrás de colado %], "0%" ) )
+			    & "</text><text x='910' y='162' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>dos colados são o 3º ônibus em diante</text><line x1='1314' x2='1314' y1='30' y2='170' stroke='#2A3456'/><text x='1348' y='52' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>CORTE SEM COLAGEM</text><text x='1346' y='126' font-size='64' font-weight='700' fill='#42D392'>"
+			    & ( FORMAT ( [Corte sem colagem], "0%" ) )
+			    & "</text><text x='1348' y='162' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>da espera extra sumiria sem colagem</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 06f12708-5aee-5fbc-b73b-40ad91cde21b
+
+	/// Histograma do intervalo dividido pelo medio.
+	measure 'HTML histograma' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_classe[classe] ), "@p", [% dos intervalos] ), NOT ISBLANK ( [@p] ) )
+			VAR mx = MAXX ( t, [@p] )
+			VAR passo = IF ( mx > 0.06, 0.02, IF ( mx > 0.03, 0.01, 0.005 ) )
+			VAR topo = CEILING ( mx * 1.1 / passo, 1 ) * passo
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1048 564' width='100%' height='100%'><text x='524' y='282' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1064 580' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<rect x='0' y='6' width='15' height='15' rx='3' fill='#FF6B6B'/><text x='23' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>colados: menos de 1/4 do intervalo médio</text><rect x='353' y='6' width='15' height='15' rx='3' fill='#6AA8FF'/><text x='376' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>demais intervalos</text><line x1='534' x2='562' y1='13' y2='13' stroke='#F4F6FB' stroke-width='2.5' stroke-dasharray='7 5'/><text x='570' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>intervalo igual ao médio</text><rect x='64' y='50' width='59.9' height='440' fill='#FF6B6B' fill-opacity='.08'/><text x='70' y='67' font-size='13' font-weight='700' fill='#FF6B6B' text-anchor='start' letter-spacing='1.2'>COLADOS</text><line x1='309.5' x2='309.5' y1='50' y2='490' stroke='#F4F6FB' stroke-opacity='.75' stroke-dasharray='7 5' stroke-width='2'/><text x='317' y='67' font-size='13' font-weight='700' fill='#F4F6FB' text-anchor='start' letter-spacing='1.2'>INTERVALO MÉDIO</text><line x1='64' x2='1034' y1='490' y2='490' stroke='#9AA3C2'/><text x='54' y='495' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='end'>0</text><text x='70' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>0</text><line x1='70.0' x2='70.0' y1='490' y2='497' stroke='#9AA3C2'/><text x='130' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>0,25</text><line x1='129.9' x2='129.9' y1='490' y2='497' stroke='#9AA3C2'/><text x='190' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>0,5</text><line x1='189.7' x2='189.7' y1='490' y2='497' stroke='#9AA3C2'/><text x='309' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>1</text><line x1='309.5' x2='309.5' y1='490' y2='497' stroke='#9AA3C2'/><text x='429' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>1,5</text><line x1='429.2' x2='429.2' y1='490' y2='497' stroke='#9AA3C2'/><text x='549' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>2</text><line x1='549.0' x2='549.0' y1='490' y2='497' stroke='#9AA3C2'/><text x='789' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>3</text><line x1='788.5' x2='788.5' y1='490' y2='497' stroke='#9AA3C2'/><text x='1028' y='516' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle'>4 ou mais</text><line x1='1028.0' x2='1028.0' y1='490' y2='497' stroke='#9AA3C2'/><text x='549' y='550' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>tamanho do intervalo dividido pelo intervalo médio do grupo (1 = igual ao médio)</text>"
+			    & ( CONCATENATEX ( GENERATESERIES ( 1, ROUND ( topo / passo, 0 ), 1 ), VAR v = [Value] * passo VAR yg = 490 - v / topo * 414 RETURN "<line x1='64' x2='1034' y1='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-dasharray='4 6'/><text x='54' y='"
+			    & ( FORMAT ( yg + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( v, IF ( passo < 0.01, "0.0%", "0%" ) ) )
+			    & "</text>", "" ) )
+			    & ( CONCATENATEX ( t, VAR hb = [@p] / topo * 414 RETURN "<rect x='"
+			    & ( FORMAT ( 64 + dim_classe[classe] * 11.9753 + 1.44, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 490 - hb, "0.0", "en-US" ) )
+			    & "' width='9.10' height='"
+			    & ( FORMAT ( hb, "0.0", "en-US" ) )
+			    & "' rx='1.5' fill='"
+			    & ( IF ( dim_classe[classe] < 5, "#FF6B6B", "#6AA8FF" ) )
+			    & "'/>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: a4a2124d-7c8a-5fca-b7b6-2d5cbb6612ae
+
+	/// Colados por faixa horaria.
+	measure 'HTML colados faixa' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_faixa[faixa], dim_faixa[ordem] ), "@c", [Colados] ), NOT ISBLANK ( [@c] ) )
+			VAR topo = MAXX ( t, [@c] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 218' width='100%' height='100%'><text x='292' y='109' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 234' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( t, VAR y = ( dim_faixa[ordem] - 1 ) * 36.33 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 24.2, "0.0", "en-US" ) )
+			    & "' font-size='16' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_faixa[faixa] )
+			    & "</text><rect x='168' y='"
+			    & ( FORMAT ( y + 10.2, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@c] / topo * 332, "0.0", "en-US" ) )
+			    & "' height='16' rx='4' fill='#FF6B6B'/><text x='584' y='"
+			    & ( FORMAT ( y + 24.2, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='700' fill='#FF6B6B' text-anchor='end'>"
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & "</text>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: d7172e24-7980-52e2-8cfe-814db7c0a735
+
+	/// Linhas com mais intervalos colados.
+	measure 'HTML colados linhas' =
+			VAR t = TOPN ( 5, FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@n", [Intervalos colados],
+			        "@c", [Colados], "@nome", CALCULATE ( MAX ( dim_linha[route_long_name] ) ) ), [@n] > 0 ),
+			        [@n], DESC, dim_linha[route_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@n] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( t, [@n] > _v || ( [@n] = _v && dim_linha[route_id] < _c ) ) ) + 1 )
+			VAR topo = MAXX ( t, [@n] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 218' width='100%' height='100%'><text x='292' y='109' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 234' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( r, VAR y = ( [@k] - 1 ) * 43.60 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 20, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#F4F6FB'>"
+			    & ( dim_linha[route_id] )
+			    & "</text><text x='76' y='"
+			    & ( FORMAT ( y + 20, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( IF ( LEN ( [@nome] ) > 44, LEFT ( [@nome], 43 ) & "…", [@nome] ), "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='584' y='"
+			    & ( FORMAT ( y + 20, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#FF6B6B' text-anchor='end'>"
+			    & ( FORMAT ( [@n], "#,0" ) )
+			    & "</text><rect x='0' y='"
+			    & ( FORMAT ( y + 29, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@n] / topo * 384, "0.0", "en-US" ) )
+			    & "' height='9' rx='3' fill='#FF6B6B'/><text x='584' y='"
+			    & ( FORMAT ( y + 40, "0.0", "en-US" ) )
+			    & "' font-size='14' fill='#C9D0E4' text-anchor='end'>"
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & " dos intervalos</text>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 08d56a57-79bf-5f77-8b9d-088411dade14
+
+	/// Acerto dos alertas contra a chance sem modelo.
+	measure 'HTML previsão capa' =
+			VAR ac = [Acerto dos alertas]
+			VAR ch = [Chance sem modelo]
+			RETURN
+			    IF ( ISBLANK ( ac ), "<div style='width:100%;height:100%;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #42D392 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #42D392 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #42D392 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1100 420' width='100%' height='100%'><text x='550' y='210' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem alerta do modelo no recorte</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #42D392 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #42D392 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #42D392 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1116 436' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='44' y='62' font-size='17' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='2.6'>ACERTO DOS ALERTAS</text><text x='44' y='290' font-size='24' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>dos alertas chegaram <tspan fill='#42D392'>colados</tspan> de fato</text><text x='44' y='322' font-size='22' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>testado uma vez, em dias que o modelo não tinha visto</text><rect x='44' y='346' width='500' height='38' rx='19' fill='#42D392' fill-opacity='.14' stroke='#42D392'/><text x='66' y='371' font-size='18' font-weight='600' fill='#42D392' text-anchor='start' font-family='Segoe UI, sans-serif'>Uso sugerido: lista de prioridade para o controle</text><text x='668' y='146' font-size='15' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.8'>COM E SEM O MODELO</text><text x='668' y='188' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Ônibus qualquer chega colado</text><text x='668' y='272' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Ônibus com alerta chega colado</text><rect x='668' y='200' width='372' height='32' rx='6' fill='#2A3456' fill-opacity='.5'/><rect x='668' y='284' width='372' height='32' rx='6' fill='#2A3456' fill-opacity='.5'/><text x='44' y='94' font-size='16' font-weight='600' fill='#42D392' text-anchor='start' letter-spacing='1.2'>"
+			    & ( [Janela do teste] )
+			    & "</text><text x='34' y='238' font-size='150' font-weight='700' fill='#42D392'>"
+			    & ( FORMAT ( ac, "0%" ) )
+			    & "</text><rect x='668' y='200' width='"
+			    & ( FORMAT ( ch * 372, "0.0", "en-US" ) )
+			    & "' height='32' rx='6' fill='#9AA3C2'/><text x='1040' y='188' font-size='19' font-weight='700' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( ch, "0.0%" ) )
+			    & "</text><rect x='668' y='284' width='"
+			    & ( FORMAT ( ac * 372, "0.0", "en-US" ) )
+			    & "' height='32' rx='6' fill='#42D392'/><text x='1040' y='272' font-size='19' font-weight='700' fill='#42D392' text-anchor='end'>"
+			    & ( FORMAT ( ac, "0.0%" ) )
+			    & "</text><text x='668' y='372' font-size='34' font-weight='700' fill='#42D392'>"
+			    & ( FORMAT ( [Vezes a chance], "0.0" ) )
+			    & "×<tspan font-size='19' font-weight='400' fill='#C9D0E4' font-family='Segoe UI, sans-serif' dx='10'>a chance de um ônibus qualquer</tspan></text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 595d7ded-5971-5acd-a37d-9d0b13b1e5ee
+
+	/// Alertas, acertos, colados avisados e passagens.
+	measure 'HTML previsão números' =
+			IF ( ISBLANK ( [Alertas] ), "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 308' width='100%' height='100%'><text x='292' y='154' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 324' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<rect x='0' y='0' width='284' height='146' rx='16' fill='#182038' stroke='#2A3456'/><rect x='0' y='18' width='4' height='110' rx='2' fill='#F4F6FB'/><text x='22' y='34' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>ALERTAS</text><text x='20' y='92' font-size='52' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [Alertas], "#,0" ) )
+			    & "</text><text x='22' y='130' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>passagens apontadas pelo modelo</text><rect x='300' y='0' width='284' height='146' rx='16' fill='#182038' stroke='#2A3456'/><rect x='300' y='18' width='4' height='110' rx='2' fill='#42D392'/><text x='322' y='34' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>ACERTOS</text><text x='320' y='92' font-size='52' font-weight='700' fill='#42D392'>"
+			    & ( FORMAT ( [Acertos], "#,0" ) )
+			    & "</text><text x='322' y='130' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>chegaram colados de fato</text><rect x='0' y='162' width='284' height='146' rx='16' fill='#182038' stroke='#2A3456'/><rect x='0' y='180' width='4' height='110' rx='2' fill='#F4F6FB'/><text x='22' y='196' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>COLADOS AVISADOS</text><text x='20' y='254' font-size='52' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [Colados avisados], "0%" ) )
+			    & "</text><text x='22' y='292' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>dos colados tiveram alerta</text><rect x='300' y='162' width='284' height='146' rx='16' fill='#182038' stroke='#2A3456'/><rect x='300' y='180' width='4' height='110' rx='2' fill='#F4F6FB'/><text x='322' y='196' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>PASSAGENS NO TESTE</text><text x='320' y='254' font-size='52' font-weight='700' fill='#F4F6FB'>"
+			    & ( VAR v = [Exemplos] RETURN IF ( v >= 1000000, FORMAT ( v / 1000000, "0.0" ) & " mi", IF ( v >= 1000, FORMAT ( v / 1000, "0" ) & " mil", FORMAT ( v, "0" ) ) ) )
+			    & "</text><text x='322' y='292' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>ônibus avaliados pelo modelo</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: ddde95b8-215e-5994-b4b8-a41ccf69d0ce
+
+	/// Alertas e acertos por dia do teste.
+	measure 'HTML previsão dia' =
+			VAR t = FILTER ( CALCULATETABLE ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@a", [Alertas no dia],
+			        "@c", [Acertos no dia], "@p", [Acerto no dia] ), REMOVEFILTERS ( sel_periodo ), REMOVEFILTERS ( dim_data ) ),
+			        [@a] > 0 )
+			VAR d0 = MINX ( t, dim_data[data] )
+			VAR n = INT ( MAXX ( t, dim_data[data] ) - d0 ) + 1
+			VAR bw = 974 / n
+			VAR mx = MAXX ( t, [@a] )
+			VAR passo = IF ( mx > 8000, 4000, IF ( mx > 4000, 2000, IF ( mx > 2000, 1000, IF ( mx > 800, 500, 100 ) ) ) )
+			VAR topo = CEILING ( mx * 1.18 / passo, 1 ) * passo
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1048 334' width='100%' height='100%'><text x='524' y='167' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1064 350' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<rect x='0' y='6' width='15' height='15' rx='3' fill='#F4F6FB' fill-opacity='.2' stroke='#F4F6FB' stroke-opacity='.5'/><text x='23' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>alertas do dia</text><rect x='158' y='6' width='15' height='15' rx='3' fill='#42D392'/><text x='181' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>chegaram colados</text><text x='331' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>o número acima da barra é o acerto do dia</text>"
+			    & ( CONCATENATEX ( GENERATESERIES ( 1, ROUND ( topo / passo, 0 ), 1 ), VAR v = [Value] * passo VAR yg = 276 - v / topo * 212 RETURN "<line x1='64' x2='1038' y1='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-dasharray='4 6'/><text x='54' y='"
+			    & ( FORMAT ( yg + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( v, "#,0" ) )
+			    & "</text>", "" ) )
+			    & "<line x1='64' x2='1038' y1='276' y2='276' stroke='#9AA3C2'/>"
+			    & ( CONCATENATEX ( t, VAR x = 64 + INT ( dim_data[data] - d0 ) * bw + bw * 0.18 VAR ha = [@a] / topo * 212 VAR hc = [@c] / topo * 212 RETURN "<rect x='"
+			    & ( FORMAT ( x, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 276 - ha, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( bw * 0.64, "0.0", "en-US" ) )
+			    & "' height='"
+			    & ( FORMAT ( ha, "0.0", "en-US" ) )
+			    & "' rx='3' fill='#F4F6FB' fill-opacity='.2' stroke='#F4F6FB' stroke-opacity='.4'/><rect x='"
+			    & ( FORMAT ( x, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 276 - hc, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( bw * 0.64, "0.0", "en-US" ) )
+			    & "' height='"
+			    & ( FORMAT ( hc, "0.0", "en-US" ) )
+			    & "' rx='3' fill='#42D392'/><text x='"
+			    & ( FORMAT ( x + bw * 0.32, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 276 - ha - 10, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#42D392' text-anchor='middle'>"
+			    & ( FORMAT ( [@p], "0%" ) )
+			    & "</text><text x='"
+			    & ( FORMAT ( x + bw * 0.32, "0.0", "en-US" ) )
+			    & "' y='302' font-size='16' fill='#C9D0E4' text-anchor='middle'>"
+			    & ( FORMAT ( dim_data[data], "dd/mm" ) )
+			    & "</text><text x='"
+			    & ( FORMAT ( x + bw * 0.32, "0.0", "en-US" ) )
+			    & "' y='322' font-size='13' fill='#9AA3C2' text-anchor='middle'>"
+			    & ( FORMAT ( dim_data[data], "ddd" ) )
+			    & "</text>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: a00977fb-abc5-5bd6-8393-cb8c5a05dd7a
+
+	/// Linhas com mais alertas no teste.
+	measure 'HTML previsão linhas' =
+			VAR t = TOPN ( 6, FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@a", [Alertas], "@c", [Acertos],
+			        "@p", [Acerto dos alertas], "@nome", CALCULATE ( MAX ( dim_linha[route_long_name] ) ) ), [@a] > 0 ),
+			        [@a], DESC, dim_linha[route_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@a] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( t, [@a] > _v || ( [@a] = _v && dim_linha[route_id] < _c ) ) ) + 1 )
+			VAR topo = MAXX ( t, [@a] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 334' width='100%' height='100%'><text x='292' y='167' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 350' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.3'>LINHA</text><text x='584' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.3'>ALERTAS · ACERTO</text>"
+			    & ( CONCATENATEX ( r, VAR y = 30 + ( [@k] - 1 ) * 50.67 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 20, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#F4F6FB'>"
+			    & ( dim_linha[route_id] )
+			    & "</text><text x='76' y='"
+			    & ( FORMAT ( y + 20, "0.0", "en-US" ) )
+			    & "' font-size='14' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( IF ( LEN ( [@nome] ) > 40, LEFT ( [@nome], 39 ) & "…", [@nome] ), "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><rect x='0' y='"
+			    & ( FORMAT ( y + 30, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@a] / topo * 424, "0.0", "en-US" ) )
+			    & "' height='12' rx='3' fill='#F4F6FB' fill-opacity='.2' stroke='#F4F6FB' stroke-opacity='.4'/><rect x='0' y='"
+			    & ( FORMAT ( y + 30, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@c] / topo * 424, "0.0", "en-US" ) )
+			    & "' height='12' rx='3' fill='#42D392'/><text x='584' y='"
+			    & ( FORMAT ( y + 20, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#F4F6FB' text-anchor='end'>"
+			    & ( FORMAT ( [@a], "#,0" ) )
+			    & "</text><text x='584' y='"
+			    & ( FORMAT ( y + 41, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#42D392' text-anchor='end'>"
+			    & ( FORMAT ( [@p], "0%" ) )
+			    & " acerto</text>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: f6295de8-b78c-5b76-a8ec-17d04c71991c
+
+	/// Cobertura, vies de interpolacao e feed parado.
+	measure 'HTML confiança' =
+			VAR cob = [Cobertura]
+			VAR tq = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@c", [Cobertura] ), NOT ISBLANK ( [@c] ) )
+			VAR pior = TOPN ( 1, tq, [@c], ASC, dim_data[data], ASC )
+			VAR cp = MINX ( pior, [@c] )
+			VAR dp = MAXX ( pior, dim_data[data] )
+			VAR vp = [Viés de interpolação %]
+			RETURN
+			    IF ( ISBLANK ( cob ), "<div style='width:100%;height:100%;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #6AA8FF 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #6AA8FF 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #6AA8FF 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1752 330' width='100%' height='100%'><text x='876' y='165' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;box-sizing:border-box;border-radius:24px;border:1px solid color-mix(in srgb, #6AA8FF 16%, rgba(148,163,255,.10));background:linear-gradient(180deg, color-mix(in srgb, #6AA8FF 8%, #111729), #111729 110px);box-shadow:inset 0 1px 0 color-mix(in srgb, #6AA8FF 30%, transparent)'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1768 346' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<rect x='24' y='24' width='552' height='282' rx='18' fill='#182038' stroke='#2A3456'/><text x='52' y='72' font-size='23' font-weight='700' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Os ônibus aparecem no dado?</text><text x='50' y='156' font-size='72' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( cob, "0.0%" ) )
+			    & "</text><text x='52' y='196' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>das passagens viram um intervalo válido</text><text x='52' y='223' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( "pior dia: " & FORMAT ( dp, "dd/mm" ) & ", com " & FORMAT ( cp, "0.0%" ) )
+			    & "</text><rect x='52' y='244' width='496' height='40' rx='20' fill-opacity='.14' fill='"
+			    & ( IF ( cob >= 0.9, "#42D392", "#FFB347" ) )
+			    & "' stroke='"
+			    & ( IF ( cob >= 0.9, "#42D392", "#FFB347" ) )
+			    & "'/><text x='74' y='270' font-size='17' font-weight='600' font-family='Segoe UI, sans-serif' fill='"
+			    & ( IF ( cob >= 0.9, "#42D392", "#FFB347" ) )
+			    & "'>"
+			    & ( IF ( cob >= 0.9, "✓ Sim: mais de 9 em cada 10", "⚠ Abaixo de 90%: leia com cuidado" ) )
+			    & "</text><rect x='600' y='24' width='552' height='282' rx='18' fill='#182038' stroke='#2A3456'/><text x='628' y='72' font-size='23' font-weight='700' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>A hora estimada distorce a conta?</text><text x='626' y='156' font-size='72' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [Viés de interpolação] * 60, "0.0" ) & " s" )
+			    & "</text><text x='628' y='196' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>a mais na espera extra, por erro de interpolação</text><text x='628' y='223' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( "é " & FORMAT ( vp, "0.00%" ) & " da espera extra" )
+			    & "</text><rect x='628' y='244' width='496' height='40' rx='20' fill-opacity='.14' fill='"
+			    & ( IF ( vp < 0.01, "#42D392", "#FFB347" ) )
+			    & "' stroke='"
+			    & ( IF ( vp < 0.01, "#42D392", "#FFB347" ) )
+			    & "'/><text x='650' y='270' font-size='17' font-weight='600' font-family='Segoe UI, sans-serif' fill='"
+			    & ( IF ( vp < 0.01, "#42D392", "#FFB347" ) )
+			    & "'>"
+			    & ( IF ( vp < 0.01, "✓ Não: menos de 1% da espera extra", "⚠ Mais de 1% da espera extra" ) )
+			    & "</text><rect x='1176' y='24' width='552' height='282' rx='18' fill='#182038' stroke='#2A3456'/><text x='1204' y='72' font-size='23' font-weight='700' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>E quando o feed da PBH para?</text><text x='1202' y='156' font-size='72' font-weight='700' fill='#FF6B6B'>"
+			    & ( VAR v = [Feed parado] RETURN IF ( v >= 1000000, FORMAT ( v / 1000000, "0.0" ) & " mi", IF ( v >= 1000, FORMAT ( v / 1000, "0" ) & " mil", FORMAT ( v, "0" ) ) ) )
+			    & "</text><text x='1204' y='196' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>intervalos descartados, não estimados</text><text x='1204' y='223' font-size='17' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( FORMAT ( [Feed parado %], "0.0%" ) & " dos intervalos · " & IF ( [Dias com feed parado] = 0, "nenhuma queda nos " & FORMAT ( [Dias com qualidade], "0" ) & " dias", "queda em " & FORMAT ( [Dias com feed parado], "0" ) & " de " & FORMAT ( [Dias com qualidade], "0" ) & " dias" ) )
+			    & "</text><rect x='1204' y='244' width='496' height='40' rx='20' fill-opacity='.14' fill='"
+			    & ( "#42D392" )
+			    & "' stroke='"
+			    & ( "#42D392" )
+			    & "'/><text x='1226' y='270' font-size='17' font-weight='600' font-family='Segoe UI, sans-serif' fill='"
+			    & ( "#42D392" )
+			    & "'>"
+			    & ( "✓ Ficam fora da conta da espera" )
+			    & "</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 69939a54-c3cc-5f97-84c1-942a48ca295b
+
+	/// Cobertura e feed parado por dia.
+	measure 'HTML confiança dia' =
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@c", [Cobertura], "@f", [Feed parado] ),
+			        NOT ISBLANK ( [@c] ) )
+			VAR d0 = MINX ( t, dim_data[data] )
+			VAR n = INT ( MAXX ( t, dim_data[data] ) - d0 ) + 1
+			VAR bw = 1612 / n
+			VAR cob = [Cobertura]
+			VAR ym = 214 - ( MAX ( 0.8, MIN ( 1, cob ) ) - 0.8 ) / 0.2 * 170
+			VAR fmax = MAXX ( t, [@f] )
+			VAR ftopo = IF ( fmax <= 0, 1000, CEILING ( fmax * 1.1 / 10000, 1 ) * 10000 )
+			VAR pior = TOPN ( 1, t, [@c], ASC, dim_data[data], ASC )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1700 424' width='100%' height='100%'><text x='850' y='212' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1716 440' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='18' font-size='14' font-weight='700' fill='#6AA8FF' text-anchor='start' letter-spacing='1.5'>COBERTURA POR DIA</text><text x='200' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>intervalos válidos por passagem · eixo de 80% a 100%</text><line x1='72' x2='1684' y1='214.0' y2='214.0' stroke='#2A3456' stroke-dasharray='4 6'/><text x='62' y='219' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>80%</text><line x1='72' x2='1684' y1='171.5' y2='171.5' stroke='#2A3456' stroke-dasharray='4 6'/><text x='62' y='177' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>85%</text><line x1='72' x2='1684' y1='129.0' y2='129.0' stroke='#2A3456' stroke-dasharray='4 6'/><text x='62' y='134' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>90%</text><line x1='72' x2='1684' y1='86.5' y2='86.5' stroke='#2A3456' stroke-dasharray='4 6'/><text x='62' y='92' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>95%</text><line x1='72' x2='1684' y1='44.0' y2='44.0' stroke='#2A3456' stroke-dasharray='4 6'/><text x='62' y='49' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>100%</text><text x='0' y='262' font-size='14' font-weight='700' fill='#FF6B6B' text-anchor='start' letter-spacing='1.5'>INTERVALOS DESCARTADOS COM O FEED PARADO</text><text x='440' y='262' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>ficam fora da conta da espera</text><line x1='72' x2='1684' y1='372' y2='372' stroke='#9AA3C2'/><text x='62' y='377' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>0</text><line x1='72' x2='1684' y1='284' y2='284' stroke='#2A3456' stroke-dasharray='4 6'/><line x1='72' x2='1684' y1='"
+			    & ( FORMAT ( ym, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( ym, "0.0", "en-US" ) )
+			    & "' stroke='#6AA8FF' stroke-opacity='.6' stroke-width='2' stroke-dasharray='8 6'/><text x='1684' y='38' font-size='15' font-weight='600' fill='#6AA8FF' text-anchor='end'>média do período: "
+			    & ( FORMAT ( cob, "0.0%" ) )
+			    & "</text><polyline points='"
+			    & ( CONCATENATEX ( t, FORMAT ( 72 + INT ( dim_data[data] - d0 ) * bw + bw / 2, "0.0", "en-US" ) & "," & FORMAT ( 214 - ( MAX ( 0.8, MIN ( 1, [@c] ) ) - 0.8 ) / 0.2 * 170, "0.0", "en-US" ), " ", dim_data[data], ASC ) )
+			    & "' fill='none' stroke='#6AA8FF' stroke-width='2.5' stroke-linejoin='round'/>"
+			    & ( CONCATENATEX ( t, "<circle cx='"
+			    & ( FORMAT ( 72 + INT ( dim_data[data] - d0 ) * bw + bw / 2, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( 214 - ( MAX ( 0.8, MIN ( 1, [@c] ) ) - 0.8 ) / 0.2 * 170, "0.0", "en-US" ) )
+			    & "' r='3.5' fill='#6AA8FF'/>", "" ) )
+			    & ( CONCATENATEX ( pior, "<circle cx='"
+			    & ( FORMAT ( 72 + INT ( dim_data[data] - d0 ) * bw + bw / 2, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( 214 - ( MAX ( 0.8, MIN ( 1, [@c] ) ) - 0.8 ) / 0.2 * 170, "0.0", "en-US" ) )
+			    & "' r='7' fill='none' stroke='#FF6B6B' stroke-width='2.5'/><text x='"
+			    & ( FORMAT ( 72 + INT ( dim_data[data] - d0 ) * bw + bw / 2 + IF ( INT ( dim_data[data] - d0 ) * bw > 1290, -14, 14 ), "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 214 - ( MAX ( 0.8, MIN ( 1, [@c] ) ) - 0.8 ) / 0.2 * 170 + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#F4F6FB' text-anchor='"
+			    & ( IF ( INT ( dim_data[data] - d0 ) * bw > 1290, "end", "start" ) )
+			    & "'>pior dia: "
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & " em "
+			    & ( FORMAT ( dim_data[data], "dd/mm" ) )
+			    & "</text>", "" ) )
+			    & "<text x='62' y='289' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>"
+			    & ( VAR v = ftopo RETURN IF ( v >= 1000000, FORMAT ( v / 1000000, "0.0" ) & " mi", IF ( v >= 1000, FORMAT ( v / 1000, "0" ) & " mil", FORMAT ( v, "0" ) ) ) )
+			    & "</text>"
+			    & ( CONCATENATEX ( t, VAR hf = [@f] / ftopo * 88 RETURN "<rect x='"
+			    & ( FORMAT ( 72 + INT ( dim_data[data] - d0 ) * bw + bw * 0.15, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 372 - hf, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( bw * 0.7, "0.0", "en-US" ) )
+			    & "' height='"
+			    & ( FORMAT ( hf, "0.0", "en-US" ) )
+			    & "' rx='2' fill='#FF6B6B'/>", "" ) )
+			    & ( CONCATENATEX ( FILTER ( t, n <= 10 || WEEKDAY ( dim_data[data], 2 ) = 1 ),
+			        VAR xd = 72 + INT ( dim_data[data] - d0 ) * bw + bw / 2
+			        RETURN "<text x='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' y='402' font-size='16' fill='#C9D0E4' text-anchor='middle'>"
+			    & ( FORMAT ( dim_data[data], "dd/mm" ) )
+			    & "</text><line x1='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' y1='374' y2='381' stroke='#9AA3C2'/>", "" ) )
+			    & "<text x='72' y='422' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( IF ( n <= 10, "dias do período", "datas: as segundas-feiras" ) )
+			    & "</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 7ffe21d8-ed78-58e0-b3ee-7ec642a5a08b
+
+	/// Espera extra hoje, simulada e o ganho.
+	measure 'HTML simulador' =
+			VAR ee = [Espera extra]
+			VAR es = [Espera extra simulada]
+			VAR g = [Ganho por passageiro]
+			VAR ws = DIVIDE ( es, ee ) * 508
+			RETURN
+			    IF ( ISBLANK ( ee ), "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 508 694' width='100%' height='100%'><text x='254' y='347' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 524 710' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='24' font-size='16' font-weight='700' fill='#42D392' text-anchor='start' letter-spacing='1.5'>ESPAÇANDO "
+			    & ( FORMAT ( [Espaçamento], "0%" ) )
+			    & " DOS PARES COLADOS</text><text x='0' y='84' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>ESPERA EXTRA HOJE</text><text x='-2' y='146' font-size='60' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( ee, "0.00" ) )
+			    & "<tspan font-size='26' dx='8'>min</tspan></text><rect x='0' y='164' width='508' height='18' rx='5' fill='#FFB347'/><text x='0' y='236' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>COM O ESPAÇAMENTO</text><text x='-2' y='298' font-size='60' font-weight='700' fill='#42D392'>+"
+			    & ( FORMAT ( es, "0.00" ) )
+			    & "<tspan font-size='26' dx='8'>min</tspan></text><rect x='0' y='316' width='"
+			    & ( FORMAT ( ws, "0.0", "en-US" ) )
+			    & "' height='18' rx='5' fill='#42D392'/>"
+			    & ( IF ( 508 - ws > 2, "<rect x='"
+			    & ( FORMAT ( ws + 1, "0.0", "en-US" ) )
+			    & "' y='317' width='"
+			    & ( FORMAT ( 508 - ws - 2, "0.0", "en-US" ) )
+			    & "' height='16' rx='5' fill='none' stroke='#FFB347' stroke-dasharray='5 4'/>" ) )
+			    & "<text x='0' y='388' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.6'>GANHO POR IDA AO PONTO</text><text x='-2' y='456' font-size='64' font-weight='700' fill='#42D392'>"
+			    & ( IF ( g > 0, "−" ) )
+			    & ( FORMAT ( g, "0.00" ) )
+			    & "<tspan font-size='28' dx='8'>min</tspan></text><text x='0' y='494' font-size='19' font-weight='400' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>cerca de "
+			    & ( FORMAT ( g * 60, "0" ) )
+			    & " segundos a menos de espera</text><text x='0' y='522' font-size='19' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( FORMAT ( [Ganho % da espera], "0.0%" ) )
+			    & " da espera média no ponto</text><line x1='0' x2='508' y1='560' y2='560' stroke='#2A3456'/><text x='0' y='600' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>Como a conta funciona: tira da espera extra a parte que some</text><text x='0' y='622' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>quando o ônibus atrasado, que puxou o de trás, passa no meio</text><text x='0' y='644' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>do caminho entre os dois (o corte sem colagem). Não inclui o</text><text x='0' y='666' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>3º ônibus em diante de um comboio.</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 00e2da88-bad2-580f-9746-669ffea7f1fc
+
+	/// Espera extra hoje e simulada por faixa.
+	measure 'HTML simulador faixa' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_faixa[faixa], dim_faixa[horas], dim_faixa[ordem] ),
+			        "@h", [Espera extra], "@s", [Espera extra simulada] ), NOT ISBLANK ( [@h] ) )
+			VAR topo = MAXX ( t, [@h] ) * 1.05
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1124 328' width='100%' height='100%'><text x='562' y='164' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1140 344' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<rect x='0' y='6' width='15' height='15' rx='3' fill='#FFB347'/><text x='23' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>espera extra hoje (min)</text><rect x='225' y='6' width='15' height='15' rx='3' fill='#42D392'/><text x='248' y='18' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>com o espaçamento escolhido</text><line x1='0' x2='1124' y1='270' y2='270' stroke='#9AA3C2'/>"
+			    & ( CONCATENATEX ( t, VAR gx = ( dim_faixa[ordem] - 0.5 ) * 187.33 VAR h1 = [@h] / topo * 218 VAR h2 = [@s] / topo * 218 RETURN "<rect x='"
+			    & ( FORMAT ( gx - 64, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 270 - h1, "0.0", "en-US" ) )
+			    & "' width='60' height='"
+			    & ( FORMAT ( h1, "0.0", "en-US" ) )
+			    & "' rx='4' fill='#FFB347'/><rect x='"
+			    & ( FORMAT ( gx + 4, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 270 - h2, "0.0", "en-US" ) )
+			    & "' width='60' height='"
+			    & ( FORMAT ( h2, "0.0", "en-US" ) )
+			    & "' rx='4' fill='#42D392'/><text x='"
+			    & ( FORMAT ( gx - 34, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 270 - h1 - 9, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#FFB347' text-anchor='middle'>"
+			    & ( FORMAT ( [@h], "0.00" ) )
+			    & "</text><text x='"
+			    & ( FORMAT ( gx + 34, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 270 - h2 - 9, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#42D392' text-anchor='middle'>"
+			    & ( FORMAT ( [@s], "0.00" ) )
+			    & "</text><text x='"
+			    & ( FORMAT ( gx, "0.0", "en-US" ) )
+			    & "' y='296' font-size='17' fill='#F4F6FB' text-anchor='middle' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_faixa[faixa] )
+			    & "</text><text x='"
+			    & ( FORMAT ( gx, "0.0", "en-US" ) )
+			    & "' y='318' font-size='14' fill='#C9D0E4' text-anchor='middle'>"
+			    & ( dim_faixa[horas] )
+			    & "</text>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 1f708dfc-a346-5b40-8d73-c28e0cad6c2b
+
+	/// Linhas com maior parte do ganho.
+	measure 'HTML simulador linhas' =
+			VAR t = TOPN ( 6, FILTER ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@p", [Parte do ganho],
+			        "@h", [Espera extra], "@s", [Espera extra simulada], "@g", [Ganho por passageiro],
+			        "@nome", CALCULATE ( MAX ( dim_linha[route_long_name] ) ) ), [@p] > 0 ),
+			        [@p], DESC, dim_linha[route_id], ASC )
+			VAR r = ADDCOLUMNS ( t, "@k", VAR _v = [@p] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( t, [@p] > _v || ( [@p] = _v && dim_linha[route_id] < _c ) ) ) + 1 )
+			VAR topo = MAXX ( t, [@g] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1124 314' width='100%' height='100%'><text x='562' y='157' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Com 0% de espaçamento não há ganho: escolha outro valor</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1140 330' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>LINHA</text><text x='540' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>HOJE</text><text x='650' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>SIMULADA</text><text x='690' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>GANHO POR PASSAGEIRO (MIN)</text><text x='1124' y='14' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>% DO GANHO DA REDE</text>"
+			    & ( CONCATENATEX ( r, VAR y = 30 + ( [@k] - 1 ) * 47.33 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 29.7, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='700' fill='#F4F6FB'>"
+			    & ( dim_linha[route_id] )
+			    & "</text><text x='80' y='"
+			    & ( FORMAT ( y + 29.7, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( IF ( LEN ( [@nome] ) > 42, LEFT ( [@nome], 41 ) & "…", [@nome] ), "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='540' y='"
+			    & ( FORMAT ( y + 29.7, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#FFB347' text-anchor='end'>"
+			    & ( FORMAT ( [@h], "0.00" ) )
+			    & "</text><text x='650' y='"
+			    & ( FORMAT ( y + 29.7, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#42D392' text-anchor='end'>"
+			    & ( FORMAT ( [@s], "0.00" ) )
+			    & "</text><rect x='690' y='"
+			    & ( FORMAT ( y + 15.7, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@g] / topo * 230, "0.0", "en-US" ) )
+			    & "' height='16' rx='4' fill='#42D392'/><text x='"
+			    & ( FORMAT ( 698 + [@g] / topo * 230, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 29.7, "0.0", "en-US" ) )
+			    & "' font-size='17' font-weight='700' fill='#42D392'>−"
+			    & ( FORMAT ( [@g], "0.00" ) )
+			    & "</text><text x='1124' y='"
+			    & ( FORMAT ( y + 29.7, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='700' fill='#F4F6FB' text-anchor='end'>"
+			    & ( FORMAT ( [@p], "0.0%" ) )
+			    & "</text><line x1='0' x2='1124' y1='"
+			    & ( FORMAT ( y + 47.3, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( y + 47.3, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-opacity='.6'/>", "" ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: f45cd113-c92c-5ea7-8d9b-495cac4ca0a7
+
+	/// Espera regular e extra por faixa, da linha escolhida.
+	measure 'HTML ficha faixa' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_faixa[faixa], dim_faixa[horas], dim_faixa[ordem] ),
+			        "@r", [Espera regular], "@x", [Espera extra] ), NOT ISBLANK ( [@x] ) )
+			VAR topo = MAXX ( t, [@r] + [@x] )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 808 270' width='100%' height='100%'><text x='404' y='135' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 824 286' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( t,
+			        VAR y = ( dim_faixa[ordem] - 1 ) * 45
+			        VAR wr = DIVIDE ( [@r], topo ) * 492
+			        VAR wx = DIVIDE ( [@x], topo ) * 492
+			        RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 22, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_faixa[faixa] )
+			    & "</text><text x='0' y='"
+			    & ( FORMAT ( y + 43, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_faixa[horas] )
+			    & "</text><rect x='170' y='"
+			    & ( FORMAT ( y + 12, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( wr, "0.0", "en-US" ) )
+			    & "' height='26' rx='4' fill='#6AA8FF'/><rect x='"
+			    & ( FORMAT ( 170 + wr, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 12, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( wx, "0.0", "en-US" ) )
+			    & "' height='26' rx='4' fill='#FFB347'/><text x='808' y='"
+			    & ( FORMAT ( y + 24, "0.0", "en-US" ) )
+			    & "' font-size='21' font-weight='700' fill='#FFB347' text-anchor='end'>+"
+			    & ( FORMAT ( [@x], "0.00" ) )
+			    & "</text><text x='808' y='"
+			    & ( FORMAT ( y + 44, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' text-anchor='end' font-family='Segoe UI, sans-serif'>de "
+			    & ( FORMAT ( [@r] + [@x], "0.0" ) )
+			    & " min</text>", "", dim_faixa[ordem], ASC ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 8dad7081-b73d-5cdf-9a82-d75254d4a5b5
+
+	/// Espera extra por dia da linha escolhida, com eventos.
+	measure 'HTML ficha dia' =
+			VAR t = FILTER ( ADDCOLUMNS ( VALUES ( dim_data[data] ), "@v", [Espera extra],
+			        "@e", CALCULATE ( MAX ( dim_data[evento] ) ) ), NOT ISBLANK ( [@v] ) )
+			VAR d0 = MINX ( t, dim_data[data] )
+			VAR d1 = MAXX ( t, dim_data[data] )
+			VAR n = INT ( d1 - d0 ) + 1
+			VAR med = [Espera extra]
+			VAR topo = MAX ( 2, CEILING ( MAXX ( t, [@v] ) * 1.3, 1 ) )
+			VAR passo = IF ( topo <= 5, 1, 2 )
+			VAR bw = 350 / n
+			VAR ym = 208 - med / topo * 178
+			VAR evd = FILTER ( eventos, eventos[evento] <> "" && eventos[data] >= d0 && eventos[data] <= d1 )
+			VAR ev = ADDCOLUMNS ( SUMMARIZE ( evd, eventos[evento], eventos[evento_l1], eventos[evento_l2],
+			        eventos[evento_l3], eventos[evento_n] ),
+			        "@d", VAR e = eventos[evento] RETURN MINX ( FILTER ( evd, eventos[evento] = e ), eventos[data] ) )
+			VAR ev2 = ADDCOLUMNS ( ev, "@i", RANKX ( ev, [@d], , ASC, DENSE ) )
+			VAR ev3 = ADDCOLUMNS ( ev2, "@y", VAR dd = [@d]
+			        RETURN 51 + SUMX ( FILTER ( ev2, [@d] < dd ), eventos[evento_n] * 19 + 12 ) )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 824 270' width='100%' height='100%'><text x='412' y='135' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 840 286' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( GENERATESERIES ( passo, topo, passo ),
+			        VAR yg = 208 - [Value] / topo * 178
+			        RETURN "<line x1='50' x2='400' y1='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( yg, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-dasharray='4 6'/><text x='40' y='"
+			    & ( FORMAT ( yg + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( [Value], "0" ) )
+			    & "</text>", "" ) )
+			    & "<line x1='50' x2='400' y1='208' y2='208' stroke='#9AA3C2'/><text x='40' y='213' font-size='15' fill='#9AA3C2' text-anchor='end'>0</text>"
+			    & ( CONCATENATEX ( t,
+			        VAR i = INT ( dim_data[data] - d0 )
+			        VAR x = 50 + i * bw + bw * 0.14
+			        VAR hb = DIVIDE ( [@v], topo ) * 178
+			        VAR e = [@e]
+			        VAR tem = e <> ""
+			        VAR k = MAXX ( FILTER ( ev2, eventos[evento] = e ), [@i] )
+			        VAR primeiro = tem && dim_data[data] = MAXX ( FILTER ( ev2, eventos[evento] = e ), [@d] )
+			        VAR cy = IF ( MOD ( k, 2 ) = 1, 44, 74 )
+			        RETURN "<rect x='"
+			    & ( FORMAT ( x, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( 208 - hb, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( bw * 0.72, "0.0", "en-US" ) )
+			    & "' height='"
+			    & ( FORMAT ( hb, "0.0", "en-US" ) )
+			    & "' rx='2' fill='"
+			    & ( IF ( tem, "#F4F6FB", "#FFB347" ) )
+			    & "'/>"
+			    & ( IF ( primeiro, "<line x1='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' y1='"
+			    & ( FORMAT ( 208 - hb - 3, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( cy + 12, "0.0", "en-US" ) )
+			    & "' stroke='#F4F6FB' stroke-opacity='.45' stroke-dasharray='2 3'/><circle cx='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( cy, "0.0", "en-US" ) )
+			    & "' r='12' fill='#F4F6FB'/><text x='"
+			    & ( FORMAT ( x + bw * 0.36, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( cy + 5, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#0A0E1C' text-anchor='middle'>"
+			    & ( FORMAT ( k, "0" ) )
+			    & "</text>" ) ), "", dim_data[data], ASC ) )
+			    & "<line x1='50' x2='400' y1='"
+			    & ( FORMAT ( ym, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( ym, "0.0", "en-US" ) )
+			    & "' stroke='#6AA8FF' stroke-width='2' stroke-dasharray='8 6'/><line x1='50' x2='80' y1='10' y2='10' stroke='#6AA8FF' stroke-width='2' stroke-dasharray='8 6'/><text x='90' y='16' font-size='16' font-weight='600' fill='#6AA8FF'>média do período: "
+			    & ( FORMAT ( med, "0.00" ) )
+			    & " min</text>"
+			    & ( CONCATENATEX ( FILTER ( t, n <= 10 || WEEKDAY ( dim_data[data], 2 ) = 1 ),
+			        VAR xd = 50 + INT ( dim_data[data] - d0 ) * bw + bw / 2
+			        RETURN "<text x='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' y='236' font-size='16' fill='#C9D0E4' text-anchor='middle'>"
+			    & ( FORMAT ( dim_data[data], "dd/mm" ) )
+			    & "</text><line x1='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( xd, "0.0", "en-US" ) )
+			    & "' y1='208' y2='215' stroke='#9AA3C2'/>", "" ) )
+			    & "<text x='50' y='266' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( IF ( n <= 10, "dias do período", "datas: as segundas-feiras" ) )
+			    & "</text><text x='436' y='20' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.5'>EVENTOS NA CIDADE</text>"
+			    & ( IF ( COUNTROWS ( ev2 ) = 0,
+			        "<text x='436' y='60' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Nenhum evento anotado no período</text>",
+			        CONCATENATEX ( FILTER ( ev3, [@y] + ( eventos[evento_n] - 1 ) * 19 <= 264 ),
+			            VAR y = [@y]
+			            RETURN "<circle cx='449' cy='"
+			    & ( FORMAT ( y - 6, "0.0", "en-US" ) )
+			    & "' r='13' fill='#F4F6FB'/><text x='449' y='"
+			    & ( FORMAT ( y - 1, "0.0", "en-US" ) )
+			    & "' font-size='15' font-weight='700' fill='#0A0E1C' text-anchor='middle'>"
+			    & ( FORMAT ( [@i], "0" ) )
+			    & "</text><text x='472' y='"
+			    & ( FORMAT ( y, "0.0", "en-US" ) )
+			    & "' font-size='16' font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( [@d], "dd/mm" ) )
+			    & "</text><text x='524' y='"
+			    & ( FORMAT ( y, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( eventos[evento_l1], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='524' y='"
+			    & ( FORMAT ( y + 19, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( eventos[evento_l2], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='524' y='"
+			    & ( FORMAT ( y + 38, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( eventos[evento_l3], "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text>", "", [@d], ASC ) ) )
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: bddcbdda-6a4e-5c79-a48d-6813b0634cbd
+
+	/// Intervalo e colados contra espera extra por linha, com a correlacao.
+	measure 'HTML o que pesa linhas' =
+			VAR t0 = CALCULATETABLE ( ADDCOLUMNS ( VALUES ( dim_linha[route_id] ), "@r", [Espera regular],
+			        "@c", [Colados], "@e", [Espera extra], "@h", [Horas de serviço] ),
+			    REMOVEFILTERS ( dim_frequencia ), dim_frequencia[frequencia] = "alta" )
+			VAR htot = SUMX ( t0, [@h] )
+			VAR t = FILTER ( t0, NOT ISBLANK ( [@e] ) && DIVIDE ( [@h], htot ) >= 0.001 )
+			VAR n = COUNTROWS ( t )
+			VAR r_int_x = SUMX ( t, [@r] ) VAR r_int_y = SUMX ( t, [@e] )
+			VAR r_int_xy = SUMX ( t, [@r] * [@e] ) VAR r_int_xx = SUMX ( t, [@r] ^ 2 ) VAR r_int_yy = SUMX ( t, [@e] ^ 2 )
+			VAR r_int = DIVIDE ( n * r_int_xy - r_int_x * r_int_y,
+			    SQRT ( ( n * r_int_xx - r_int_x ^ 2 ) * ( n * r_int_yy - r_int_y ^ 2 ) ) )
+			VAR r_col_x = SUMX ( t, [@c] ) VAR r_col_y = SUMX ( t, [@e] )
+			VAR r_col_xy = SUMX ( t, [@c] * [@e] ) VAR r_col_xx = SUMX ( t, [@c] ^ 2 ) VAR r_col_yy = SUMX ( t, [@e] ^ 2 )
+			VAR r_col = DIVIDE ( n * r_col_xy - r_col_x * r_col_y,
+			    SQRT ( ( n * r_col_xx - r_col_x ^ 2 ) * ( n * r_col_yy - r_col_y ^ 2 ) ) )
+			VAR mr = PERCENTILEX.INC ( t, [@r], 0.98 ) * 1.1
+			VAR mc = PERCENTILEX.INC ( t, [@c], 0.98 ) * 1.1
+			VAR my = PERCENTILEX.INC ( t, [@e], 0.98 ) * 1.15
+			VAR mh = MAXX ( t, [@h] )
+			RETURN
+			    IF ( n < 5, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1048 422' width='100%' height='100%'><text x='524' y='211' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Poucas linhas no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1064 438' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='60' y='22' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.4'>INTERVALO ENTRE ÔNIBUS</text><text x='60' y='60' font-size='34' font-weight='700' fill='#9AA3C2'>r = "
+			    & ( FORMAT ( r_int, "0.00" ) )
+			    & "</text><text x='230' y='58' font-size='18' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( SWITCH ( TRUE (), ABS ( r_int ) < 0.2, "quase nenhuma relação", ABS ( r_int ) < 0.5, "relação fraca", ABS ( r_int ) < 0.7, "relação média", "relação forte" ) )
+			    & "</text><line x1='60' x2='509' y1='376' y2='376' stroke='#9AA3C2'/><line x1='60' x2='60' y1='74' y2='376' stroke='#9AA3C2'/>"
+			    & ( CONCATENATEX ( t, "<circle cx='"
+			    & ( FORMAT ( 60 + MIN ( [@r] / mr, 1 ) * 449, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( 376 - MIN ( [@e] / my, 1 ) * 302, "0.0", "en-US" ) )
+			    & "' r='"
+			    & ( FORMAT ( 2.5 + 8 * SQRT ( DIVIDE ( [@h], mh ) ), "0.0", "en-US" ) )
+			    & "' fill='#9AA3C2' fill-opacity='.55' stroke='#0A0E1C' stroke-width='.8'/>", "", [@h], DESC ) )
+			    & "<text x='60' y='396' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='middle'>0</text><text x='509' y='396' font-size='14' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( mr, "0" ) )
+			    & "</text><text x='284' y='420' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>espera com ônibus regulares (metade do intervalo, min)</text><text x='52' y='381' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>0</text><text x='52' y='79' font-size='14' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( my, "0" ) )
+			    & "</text><text x='599' y='22' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.4'>ÔNIBUS COLADOS</text><text x='599' y='60' font-size='34' font-weight='700' fill='#FF6B6B'>r = "
+			    & ( FORMAT ( r_col, "0.00" ) )
+			    & "</text><text x='769' y='58' font-size='18' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( SWITCH ( TRUE (), ABS ( r_col ) < 0.2, "quase nenhuma relação", ABS ( r_col ) < 0.5, "relação fraca", ABS ( r_col ) < 0.7, "relação média", "relação forte" ) )
+			    & "</text><line x1='599' x2='1048' y1='376' y2='376' stroke='#9AA3C2'/><line x1='599' x2='599' y1='74' y2='376' stroke='#9AA3C2'/>"
+			    & ( CONCATENATEX ( t, "<circle cx='"
+			    & ( FORMAT ( 599 + MIN ( [@c] / mc, 1 ) * 449, "0.0", "en-US" ) )
+			    & "' cy='"
+			    & ( FORMAT ( 376 - MIN ( [@e] / my, 1 ) * 302, "0.0", "en-US" ) )
+			    & "' r='"
+			    & ( FORMAT ( 2.5 + 8 * SQRT ( DIVIDE ( [@h], mh ) ), "0.0", "en-US" ) )
+			    & "' fill='#FF6B6B' fill-opacity='.55' stroke='#0A0E1C' stroke-width='.8'/>", "", [@h], DESC ) )
+			    & "<text x='599' y='396' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='middle'>0</text><text x='1048' y='396' font-size='14' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( mc, "0%" ) )
+			    & "</text><text x='823' y='420' font-size='15' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>intervalos colados</text><text x='591' y='381' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='end'>0</text><text x='591' y='79' font-size='14' fill='#9AA3C2' text-anchor='end'>"
+			    & ( FORMAT ( my, "0" ) )
+			    & "</text><text transform='translate(14,225) rotate(-90)' font-size='15' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>espera extra (min)</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: b467a130-5658-5453-ac74-c21a4cc92e38
+
+	/// Espera extra nos pontos pelo numero de linhas.
+	measure 'HTML o que pesa pontos' =
+			VAR faixas = DATATABLE ( "rot", STRING, "lo", INTEGER, "hi", INTEGER, "o", INTEGER, {
+			        { "1 linha", 1, 1, 1 },
+			        { "2 a 3 linhas", 2, 3, 2 },
+			        { "4 a 8 linhas", 4, 8, 3 },
+			        { "9 ou mais", 9, 999, 4 } } )
+			VAR t = FILTER ( ADDCOLUMNS ( faixas, "@e", VAR _lo = [lo] VAR _hi = [hi] RETURN CALCULATE ( [Ponto · espera extra], FILTER ( ALL ( fato_paradas[linhas] ), fato_paradas[linhas] >= _lo && fato_paradas[linhas] <= _hi ) ),
+			        "@n", VAR _lo = [lo] VAR _hi = [hi] RETURN CALCULATE ( DISTINCTCOUNT ( fato_paradas[stop_id] ), FILTER ( ALL ( fato_paradas[linhas] ), fato_paradas[linhas] >= _lo && fato_paradas[linhas] <= _hi ) ) ), NOT ISBLANK ( [@e] ) )
+			VAR rede = [Ponto · espera extra]
+			VAR topo = MAX ( MAXX ( t, [@e] ), rede ) * 1.18
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 584 422' width='100%' height='100%'><text x='292' y='211' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 438' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( t, VAR y = ( [o] - 1 ) * 90.50 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 45.2 - 2, "0.0", "en-US" ) )
+			    & "' font-size='19' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( [rot] )
+			    & "</text><text x='0' y='"
+			    & ( FORMAT ( y + 45.2 + 22, "0.0", "en-US" ) )
+			    & "' font-size='14' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( FORMAT ( [@n], "#,0" ) )
+			    & " pontos</text><rect x='190' y='"
+			    & ( FORMAT ( y + 45.2 - 14, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@e] / topo * 304, "0.0", "en-US" ) )
+			    & "' height='24' rx='4' fill='#FFB347'/><text x='"
+			    & ( FORMAT ( 200 + [@e] / topo * 304, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 45.2 + 6, "0.0", "en-US" ) )
+			    & "' font-size='20' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text>", "", [o], ASC ) )
+			    & "<line x1='"
+			    & ( FORMAT ( 190 + rede / topo * 304, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( 190 + rede / topo * 304, "0.0", "en-US" ) )
+			    & "' y1='4' y2='358' stroke='#F4F6FB' stroke-opacity='.75' stroke-width='2' stroke-dasharray='6 5'/><text x='"
+			    & ( FORMAT ( 190 + rede / topo * 304, "0.0", "en-US" ) )
+			    & "' y='378' font-size='14' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>todos: +"
+			    & ( FORMAT ( rede, "0.00" ) )
+			    & "</text><text x='0' y='418' font-size='15' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>A irregularidade vem da linha: o ponto só junta as linhas que passam nele.</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 57f63c78-247d-5f5b-992c-22061aea529f
+
+	/// Espera extra por tipo de dia.
+	measure 'HTML o que pesa dias' =
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_tipo_dia[tipo], dim_tipo_dia[ordem] ), "@e", [Espera extra],
+			        "@c", [Colados], "@h", [Horas de serviço] ), NOT ISBLANK ( [@e] ) )
+			VAR htot = SUMX ( t, [@h] )
+			VAR rede = CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_tipo_dia ) )
+			VAR topo = MAX ( MAXX ( t, [@e] ), rede ) * 1.18
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1048 194' width='100%' height='100%'><text x='524' y='97' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 1064 210' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( t, VAR y = ( dim_tipo_dia[ordem] - 1 ) * 58.00 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 36.0, "0.0", "en-US" ) )
+			    & "' font-size='19' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_tipo_dia[tipo] )
+			    & "</text><rect x='250' y='"
+			    & ( FORMAT ( y + 18.0, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@e] / topo * 498, "0.0", "en-US" ) )
+			    & "' height='22' rx='4' fill='#FFB347'/><text x='"
+			    & ( FORMAT ( 260 + [@e] / topo * 498, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 36.0, "0.0", "en-US" ) )
+			    & "' font-size='20' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text><text x='1048' y='"
+			    & ( FORMAT ( y + 36.0, "0.0", "en-US" ) )
+			    & "' font-size='17' fill='#C9D0E4' text-anchor='end' font-family='Segoe UI, sans-serif'><tspan font-weight='700' fill='#F4F6FB'>"
+			    & ( FORMAT ( DIVIDE ( [@h], htot ), "0.0%" ) )
+			    & "</tspan> das horas · <tspan font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [@c], "0%" ) )
+			    & "</tspan> colados</text>", "", dim_tipo_dia[ordem], ASC ) )
+			    & "<line x1='"
+			    & ( FORMAT ( 250 + rede / topo * 498, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( 250 + rede / topo * 498, "0.0", "en-US" ) )
+			    & "' y1='2' y2='172' stroke='#F4F6FB' stroke-opacity='.75' stroke-width='2' stroke-dasharray='6 5'/><text x='"
+			    & ( FORMAT ( 250 + rede / topo * 498, "0.0", "en-US" ) )
+			    & "' y='192' font-size='14' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>todos os dias: +"
+			    & ( FORMAT ( rede, "0.00" ) )
+			    & "</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 8f6d3014-65b4-5bfa-9dd2-650d9da0a357
+
+	/// Tres leituras do que a pagina mostra.
+	measure 'HTML o que pesa leitura' =
+			"<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 600 236' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<circle cx='14' cy='22' r='14' fill='#42D392' fill-opacity='.16' stroke='#42D392'/><text x='14' y='28' font-size='16' font-weight='700' fill='#42D392' text-anchor='middle'>1</text><text x='42' y='28' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Controlar o espaçamento, não só a frota</text><text x='42' y='54' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Mais ônibus numa linha irregular não a deixa regular.</text><circle cx='14' cy='95' r='14' fill='#42D392' fill-opacity='.16' stroke='#42D392'/><text x='14' y='101' font-size='16' font-weight='700' fill='#42D392' text-anchor='middle'>2</text><text x='42' y='101' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Agir linha a linha, não ponto a ponto</text><text x='42' y='127' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Ponto com muitas linhas não espera mais que os outros.</text><circle cx='14' cy='169' r='14' fill='#42D392' fill-opacity='.16' stroke='#42D392'/><text x='14' y='175' font-size='16' font-weight='700' fill='#42D392' text-anchor='middle'>3</text><text x='42' y='175' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Ver o fim de semana à parte</text><text x='42' y='201' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Roda pouca linha frequente: pesa pouco na média da rede.</text>"
+			    & "</svg></div>"
+		displayFolder: HTML
+		lineageTag: 5b9b26a8-9b96-5bf7-b326-e6219e76ca8f
+
+	/// Espera extra por grupo de trajeto e as linhas do grupo.
+	measure 'HTML onde agir rotas' =
+			VAR rede = [Espera extra da rede no recorte]
+			VAR volrede = [Volume da rede]
+			VAR horasrede = CALCULATE ( [Horas de serviço], REMOVEFILTERS ( dim_linha ) )
+			VAR t = FILTER ( ADDCOLUMNS ( ALL ( dim_linha[trajeto], dim_linha[trajeto_ordem] ),
+			        "@e", VAR _tr = dim_linha[trajeto] RETURN CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_linha ), dim_linha[trajeto] = _tr ),
+			        "@c", VAR _tr = dim_linha[trajeto] RETURN CALCULATE ( [Colados], REMOVEFILTERS ( dim_linha ), dim_linha[trajeto] = _tr ),
+			        "@n", VAR _tr = dim_linha[trajeto] RETURN CALCULATE ( [Linhas medidas], REMOVEFILTERS ( dim_linha ), dim_linha[trajeto] = _tr ),
+			        "@p", VAR _tr = dim_linha[trajeto] RETURN CALCULATE ( DIVIDE ( [Volume], volrede ), REMOVEFILTERS ( dim_linha ), dim_linha[trajeto] = _tr ),
+			        "@hp", VAR _tr = dim_linha[trajeto] RETURN CALCULATE ( DIVIDE ( [Horas de serviço], horasrede ), REMOVEFILTERS ( dim_linha ), dim_linha[trajeto] = _tr ) ),
+			    NOT ISBLANK ( [@e] ) )
+			VAR topo = MAX ( MAXX ( t, [@e] ), rede ) * 1.12
+			VAR l = CALCULATETABLE ( VALUES ( dim_linha[route_id] ), REMOVEFILTERS ( dim_linha ), dim_linha[trajeto] = "Da estação ao centro" )
+			VAR l2 = FILTER ( ADDCOLUMNS ( l, "@v", VAR _rid = dim_linha[route_id] RETURN CALCULATE ( [Volume], REMOVEFILTERS ( dim_linha ), dim_linha[route_id] = _rid ),
+			        "@e", VAR _rid = dim_linha[route_id] RETURN CALCULATE ( [Espera extra], REMOVEFILTERS ( dim_linha ), dim_linha[route_id] = _rid ),
+			        "@c", VAR _rid = dim_linha[route_id] RETURN CALCULATE ( [Colados], REMOVEFILTERS ( dim_linha ), dim_linha[route_id] = _rid ),
+			        "@nome", VAR _rid = dim_linha[route_id] RETURN CALCULATE ( MAX ( dim_linha[route_long_name] ), REMOVEFILTERS ( dim_linha ), dim_linha[route_id] = _rid ) ), NOT ISBLANK ( [@v] ) )
+			VAR top5 = TOPN ( 5, l2, [@v], DESC, dim_linha[route_id], ASC )
+			VAR r = ADDCOLUMNS ( top5, "@k", VAR _v = [@v] VAR _c = dim_linha[route_id] RETURN COUNTROWS ( FILTER ( top5, [@v] > _v || ( [@v] = _v && dim_linha[route_id] < _c ) ) ) + 1 )
+			RETURN
+			    IF ( COUNTROWS ( t ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 808 770' width='100%' height='100%'><text x='404' y='385' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 824 786' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>TRAJETO</text><text x='262' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.2'>ESPERA EXTRA (MIN)</text><text x='700' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>COLADOS</text><text x='808' y='16' font-size='13' font-weight='700' fill='#C9D0E4' text-anchor='end' letter-spacing='1.2'>% DA REDE</text>"
+			    & ( CONCATENATEX ( t, VAR y = 40 + ( dim_linha[trajeto_ordem] - 1 ) * 82 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 30, "0.0", "en-US" ) )
+			    & "' font-size='20' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( dim_linha[trajeto] )
+			    & "</text><text x='0' y='"
+			    & ( FORMAT ( y + 54, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( FORMAT ( [@n], "0" ) )
+			    & " linhas · "
+			    & ( FORMAT ( [@hp], "0%" ) )
+			    & " das horas</text><rect x='262' y='"
+			    & ( FORMAT ( y + 16, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@e] / topo * 300, "0.0", "en-US" ) )
+			    & "' height='28' rx='5' fill='#FFB347'/><text x='"
+			    & ( FORMAT ( 272 + [@e] / topo * 300, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 38, "0.0", "en-US" ) )
+			    & "' font-size='22' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text><text x='700' y='"
+			    & ( FORMAT ( y + 38, "0.0", "en-US" ) )
+			    & "' font-size='20' font-weight='700' fill='#FF6B6B' text-anchor='end'>"
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & "</text><text x='808' y='"
+			    & ( FORMAT ( y + 38, "0.0", "en-US" ) )
+			    & "' font-size='20' font-weight='700' fill='#F4F6FB' text-anchor='end'>"
+			    & ( FORMAT ( [@p], "0%" ) )
+			    & "</text><line x1='0' x2='808' y1='"
+			    & ( FORMAT ( y + 78, "0.0", "en-US" ) )
+			    & "' y2='"
+			    & ( FORMAT ( y + 78, "0.0", "en-US" ) )
+			    & "' stroke='#2A3456' stroke-opacity='.6'/>", "", dim_linha[trajeto_ordem], ASC ) )
+			    & "<line x1='"
+			    & ( FORMAT ( 262 + rede / topo * 300, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( 262 + rede / topo * 300, "0.0", "en-US" ) )
+			    & "' y1='44' y2='366' stroke='#F4F6FB' stroke-opacity='.75' stroke-width='2' stroke-dasharray='6 5'/><text x='"
+			    & ( FORMAT ( 262 + rede / topo * 300, "0.0", "en-US" ) )
+			    & "' y='386' font-size='14' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>rede: +"
+			    & ( FORMAT ( rede, "0.00" ) )
+			    & "</text>"
+			    & ( CONCATENATEX ( r, VAR yy = 446 + ( [@k] - 1 ) * 34 RETURN "<text x='0' y='"
+			    & ( FORMAT ( yy, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='700' fill='#F4F6FB'>"
+			    & ( dim_linha[route_id] )
+			    & "</text><text x='80' y='"
+			    & ( FORMAT ( yy, "0.0", "en-US" ) )
+			    & "' font-size='15' fill='#C9D0E4' font-family='Segoe UI, sans-serif'>"
+			    & ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( IF ( LEN ( [@nome] ) > 50, LEFT ( [@nome], 49 ) & "…", [@nome] ), "&", "&amp;" ), "<", "&lt;" ), ">", "&gt;" ) )
+			    & "</text><text x='700' y='"
+			    & ( FORMAT ( yy, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='700' fill='#FFB347' text-anchor='end'>+"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text><text x='808' y='"
+			    & ( FORMAT ( yy, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='700' fill='#FF6B6B' text-anchor='end'>"
+			    & ( FORMAT ( [@c], "0.0%" ) )
+			    & "</text>", "", [@k], ASC ) )
+			    & "<text x='0' y='416' font-size='14' font-weight='700' fill='#C9D0E4' text-anchor='start' letter-spacing='1.4'>AS DE MAIOR PESO ENTRE AS QUE VÃO DA ESTAÇÃO AO CENTRO</text><text x='0' y='620' font-size='14' font-weight='700' fill='#42D392' text-anchor='start' letter-spacing='1.6'>O QUE FAZER</text><circle cx='11' cy='644' r='11' fill='#42D392' fill-opacity='.16' stroke='#42D392'/><text x='11' y='649' font-size='14' font-weight='700' fill='#42D392' text-anchor='middle'>1</text><text x='32' y='650' font-size='17' font-weight='400' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Seccionar na estação: a linha leva o passageiro até ela e o tronco segue ao centro.</text><circle cx='11' cy='676' r='11' fill='#42D392' fill-opacity='.16' stroke='#42D392'/><text x='11' y='681' font-size='14' font-weight='700' fill='#42D392' text-anchor='middle'>2</text><text x='32' y='682' font-size='17' font-weight='400' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Onde não der: faixa e semáforo no trecho central, e ônibus espaçados antes de entrar nele.</text><text x='0' y='748' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>O grupo sai do nome da linha: estação; centro, Savassi ou hospitais. É associação, não prova de causa:</text><text x='0' y='768' font-size='14' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>antes de mudar uma rota, conferir trajeto, lotação e onde o passageiro desce.</text>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: edd18196-51c0-59bf-83fe-0fe1bd2cb059
+
+	/// Cinco ajustes na circulacao, com o numero.
+	measure 'HTML onde agir operação' =
+			VAR tf = ADDCOLUMNS ( ALL ( dim_faixa[faixa], dim_faixa[ordem] ), "@x", [Espera extra], "@h", [Horas de serviço] )
+			VAR htot = SUMX ( tf, [@h] )
+			VAR mov = FILTER ( tf, NOT ISBLANK ( [@x] ) && DIVIDE ( [@h], htot ) >= 0.10 )
+			VAR pior = TOPN ( 1, mov, [@x], DESC, dim_faixa[ordem], ASC )
+			VAR melhor = TOPN ( 1, mov, [@x], ASC, dim_faixa[ordem], ASC )
+			VAR faixa_max = MAXX ( pior, dim_faixa[faixa] )
+			VAR faixa_min = MAXX ( melhor, dim_faixa[faixa] )
+			VAR um = ROW ( "@x", MAXX ( pior, [@x] ), "@y", MAXX ( melhor, [@x] ) )
+			RETURN
+			    IF ( ISBLANK ( [Espera extra] ) || COUNTROWS ( mov ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 824 422' width='100%' height='100%'><text x='412' y='211' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    CONCATENATEX ( um, "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 840 438' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & "<text x='0' y='46' font-size='40' font-weight='700' fill='#42D392'>−"
+			    & ( FORMAT ( [Ganho sem colagem], "0.00" ) )
+			    & "<tspan font-size='20' dx='6'>min</tspan></text><text x='1' y='70' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>por ida ao ponto</text><text x='236' y='28' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Espaçar os ônibus colados no caminho</text><text x='236' y='52' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Segurar o que encostou no da frente: some "
+			    & ( FORMAT ( [Corte sem colagem], "0%" ) )
+			    & " da espera extra.</text><text x='236' y='74' font-size='16' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>Controle por GPS no ponto. É o Simulador com 100% dos pares.</text><line x1='0' x2='824' y1='81' y2='81' stroke='#2A3456' stroke-opacity='.7'/><text x='0' y='130' font-size='40' font-weight='700' fill='#FFB347'>"
+			    & ( FORMAT ( [Linhas para 80%], "0" ) )
+			    & "<tspan font-size='20' dx='6'>linhas</tspan></text><text x='1' y='154' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>de "
+			    & ( FORMAT ( [Linhas na rede], "0" ) )
+			    & " medidas</text><text x='236' y='112' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Começar por poucas linhas</text><text x='236' y='136' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Elas somam 80% da espera extra do recorte.</text><text x='236' y='158' font-size='16' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>O mesmo esforço de controle alcança mais gente nelas.</text><line x1='0' x2='824' y1='165' y2='165' stroke='#2A3456' stroke-opacity='.7'/><text x='0' y='215' font-size='40' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( [@x], "0.00" ) )
+			    & "<tspan font-size='20' dx='6'>min</tspan></text><text x='1' y='239' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>"
+			    & ( faixa_max )
+			    & "</text><text x='236' y='197' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Reforçar o controle no "
+			    & ( LOWER ( faixa_max ) )
+			    & "</text><text x='236' y='221' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>A maior espera extra entre as faixas de mais serviço (+"
+			    & ( FORMAT ( [@y], "0.00" ) )
+			    & " no "
+			    & ( LOWER ( faixa_min ) )
+			    & ").</text><text x='236' y='243' font-size='16' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>Fiscal e regulação onde a irregularidade é maior por passageiro.</text><line x1='0' x2='824' y1='250' y2='250' stroke='#2A3456' stroke-opacity='.7'/><text x='0' y='299' font-size='40' font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [Colados atrás de colado %], "0%" ) )
+			    & "</text><text x='1' y='323' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>dos colados</text><text x='236' y='281' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Despachar com intervalo fixo no terminal</text><text x='236' y='305' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>São comboios de 3 ou mais ônibus, que espaçar no caminho não desfaz.</text><text x='236' y='327' font-size='16' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>O controle começa na saída do terminal, não só no trajeto.</text><line x1='0' x2='824' y1='334' y2='334' stroke='#2A3456' stroke-opacity='.7'/><text x='0' y='384' font-size='40' font-weight='700' fill='#42D392'>"
+			    & ( FORMAT ( [Vezes a chance], "0.0" ) )
+			    & "<tspan font-size='20' dx='6'>×</tspan></text><text x='1' y='408' font-size='14' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>a chance sem modelo</text><text x='236' y='366' font-size='19' font-weight='600' fill='#F4F6FB' text-anchor='start' font-family='Segoe UI, sans-serif'>Usar a previsão como lista de prioridade</text><text x='236' y='390' font-size='16' font-weight='400' fill='#C9D0E4' text-anchor='start' font-family='Segoe UI, sans-serif'>Dez paradas antes, os alertas do modelo acertam "
+			    & ( FORMAT ( [Acerto dos alertas], "0%" ) )
+			    & ".</text><text x='236' y='412' font-size='16' font-weight='400' fill='#9AA3C2' text-anchor='start' font-family='Segoe UI, sans-serif'>Mostrar ao controle os de maior risco, sem ação automática.</text>"
+			    & "</svg></div>", "" ) )
+		displayFolder: HTML
+		lineageTag: 0a698630-4b82-51b7-b9da-e27abe475963
+
+	/// Avenidas de maior espera extra nos pontos.
+	measure 'HTML onde agir corredores' =
+			VAR vias = DATATABLE ( "k", STRING, "rot", STRING, {
+			        { "Waldyr Soeiro Emrich", "Av. Waldyr Soeiro Emrich" },
+			        { "Cristiano Machado", "Av. Cristiano Machado" },
+			        { "Raja Gabaglia", "Av. Raja Gabaglia" },
+			        { "Ursula Paulino", "R. Úrsula Paulino" },
+			        { "Nossa Senhora do Carmo", "Av. N. Sra. do Carmo" },
+			        { "Amazonas", "Av. Amazonas" },
+			        { "Dom Pedro II", "Av. Dom Pedro II" },
+			        { "Afonso Pena", "Av. Afonso Pena" },
+			        { "Carlos Luz", "Av. Pres. Carlos Luz" },
+			        { "Antonio Carlos", "Av. Pres. Antônio Carlos" },
+			        { "Contorno", "Av. do Contorno" } } )
+			VAR t = FILTER ( ADDCOLUMNS ( vias, "@e", VAR _via = [k] RETURN CALCULATE ( [Ponto · espera extra], FILTER ( ALL ( fato_paradas[stop_name] ), CONTAINSSTRING ( fato_paradas[stop_name], _via ) ) ),
+			        "@c", VAR _via = [k] RETURN CALCULATE ( [Ponto · colados], FILTER ( ALL ( fato_paradas[stop_name] ), CONTAINSSTRING ( fato_paradas[stop_name], _via ) ) ),
+			        "@h", VAR _via = [k] RETURN CALCULATE ( [Ponto · horas], FILTER ( ALL ( fato_paradas[stop_name] ), CONTAINSSTRING ( fato_paradas[stop_name], _via ) ) ) ), [@h] >= 5000 )
+			VAR tp = TOPN ( 5, t, [@e], DESC, [k], ASC )
+			VAR r = ADDCOLUMNS ( tp, "@k", VAR _v = [@e] VAR _c = [k] RETURN COUNTROWS ( FILTER ( tp, [@e] > _v || ( [@e] = _v && [k] < _c ) ) ) + 1 )
+			VAR rede = [Ponto · espera extra]
+			VAR topo = MAX ( MAXX ( tp, [@e] ), rede ) * 1.15
+			RETURN
+			    IF ( COUNTROWS ( tp ) = 0, "<div style='width:100%;height:100%;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 824 194' width='100%' height='100%'><text x='412' y='97' font-size='20' font-weight='400' fill='#C9D0E4' text-anchor='middle' font-family='Segoe UI, sans-serif'>Sem dado no recorte escolhido</text></svg></div>",
+			    "<div style='width:100%;height:100%;overflow:hidden;background:#111729'><svg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -8 840 210' width='100%' height='100%' preserveAspectRatio='xMidYMid meet' font-family='Bahnschrift, DIN Alternate, Segoe UI, sans-serif'>"
+			    & ( CONCATENATEX ( r, VAR y = ( [@k] - 1 ) * 38.80 RETURN "<text x='0' y='"
+			    & ( FORMAT ( y + 25.4, "0.0", "en-US" ) )
+			    & "' font-size='18' font-weight='600' fill='#F4F6FB' font-family='Segoe UI, sans-serif'>"
+			    & ( [rot] )
+			    & "</text><rect x='300' y='"
+			    & ( FORMAT ( y + 9.4, "0.0", "en-US" ) )
+			    & "' width='"
+			    & ( FORMAT ( [@e] / topo * 330, "0.0", "en-US" ) )
+			    & "' height='20' rx='4' fill='#FFB347'/><text x='"
+			    & ( FORMAT ( 310 + [@e] / topo * 330, "0.0", "en-US" ) )
+			    & "' y='"
+			    & ( FORMAT ( y + 25.4, "0.0", "en-US" ) )
+			    & "' font-size='19' font-weight='700' fill='#FFB347'>+"
+			    & ( FORMAT ( [@e], "0.00" ) )
+			    & "</text><text x='824' y='"
+			    & ( FORMAT ( y + 25.4, "0.0", "en-US" ) )
+			    & "' font-size='17' fill='#C9D0E4' text-anchor='end' font-family='Segoe UI, sans-serif'><tspan font-weight='700' fill='#FF6B6B'>"
+			    & ( FORMAT ( [@c], "0%" ) )
+			    & "</tspan> colados</text>", "", [@k], ASC ) )
+			    & "<line x1='"
+			    & ( FORMAT ( 300 + rede / topo * 330, "0.0", "en-US" ) )
+			    & "' x2='"
+			    & ( FORMAT ( 300 + rede / topo * 330, "0.0", "en-US" ) )
+			    & "' y1='2' y2='192' stroke='#F4F6FB' stroke-opacity='.75' stroke-width='2' stroke-dasharray='6 5'/>"
+			    & "</svg></div>" )
+		displayFolder: HTML
+		lineageTag: 2636d0cc-885a-5615-9713-d7d183254bd7
+
+	column x
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 7eee01a0-c4d9-51be-8466-e3f79bd40412
+		summarizeBy: none
+		sourceColumn: [x]
+
+		annotation SummarizationSetBy = User
+
+	partition _Medidas = calculated
+		mode: import
+		source = ROW ( "x", 0 )

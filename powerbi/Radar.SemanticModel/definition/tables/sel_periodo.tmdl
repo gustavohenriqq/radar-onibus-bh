@@ -1,0 +1,45 @@
+/// Seletor de periodo: cada dia aparece em todas as janelas que o contem. Filtra dim_data nos dois sentidos.
+table sel_periodo
+	lineageTag: 41c83b8a-9b78-5339-8190-0d567506f8e2
+
+	column periodo
+		dataType: string
+		lineageTag: 6b4efa7f-03ff-59f2-8c46-fe8b74dfa9d1
+		summarizeBy: none
+		sourceColumn: [periodo]
+		sortByColumn: ordem
+
+		annotation SummarizationSetBy = User
+
+	column ordem
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: c7d4c638-dc77-5675-8507-3437e027ee1f
+		summarizeBy: none
+		sourceColumn: [ordem]
+
+		annotation SummarizationSetBy = User
+
+	column data
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 8577d7eb-00a7-5d3a-9550-44c0016b00d6
+		summarizeBy: none
+		sourceColumn: [data]
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	partition sel_periodo = calculated
+		mode: import
+		source =
+				VAR ultimo = MAX ( fato_linha[data_bh] )
+				VAR dias = CALENDAR ( MIN ( fato_linha[data_bh] ), ultimo )
+				RETURN
+				    UNION (
+				        SELECTCOLUMNS ( dias, "periodo", "Tudo desde 15/09", "ordem", 1, "data", [Date] ),
+				        SELECTCOLUMNS ( FILTER ( dias, [Date] > ultimo - 28 ), "periodo", "Últimos 28 dias", "ordem", 2, "data", [Date] ),
+				        SELECTCOLUMNS ( FILTER ( dias, [Date] > ultimo - 7 ), "periodo", "Últimos 7 dias", "ordem", 3, "data", [Date] )
+				    )

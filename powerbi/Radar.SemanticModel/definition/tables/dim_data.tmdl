@@ -1,0 +1,93 @@
+/// Calendario dos dias com dado, com dia da semana, semana e eventos do painel web.
+table dim_data
+	lineageTag: f0ae3dbe-3cc6-56d2-bc64-d40103872a98
+
+	column data
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 5eaa4683-fcb2-53c0-8924-c382d8b7b71f
+		summarizeBy: none
+		sourceColumn: [data]
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column rotulo
+		dataType: string
+		lineageTag: 3c85a86c-aee3-5ab0-b646-d63ab4e1ae87
+		summarizeBy: none
+		sourceColumn: [rotulo]
+
+		annotation SummarizationSetBy = User
+
+	column dia_semana
+		dataType: string
+		lineageTag: a0f97aa2-807c-546d-a22d-dbefbc6c64e5
+		summarizeBy: none
+		sourceColumn: [dia_semana]
+		sortByColumn: dia_semana_ordem
+
+		annotation SummarizationSetBy = User
+
+	column dia_semana_ordem
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 7f736c7f-65a8-5e14-be0c-7cc50c6ad90a
+		summarizeBy: none
+		sourceColumn: [dia_semana_ordem]
+
+		annotation SummarizationSetBy = User
+
+	column semana
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: b9443261-bc2d-5c86-9732-ee04959c2e48
+		summarizeBy: none
+		sourceColumn: [semana]
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column semana_rotulo
+		dataType: string
+		lineageTag: f80770ef-7324-5b35-b6d6-6cc3c7f8a1d7
+		summarizeBy: none
+		sourceColumn: [semana_rotulo]
+		sortByColumn: semana
+
+		annotation SummarizationSetBy = User
+
+	column evento
+		dataType: string
+		lineageTag: 033055bc-e28a-58ad-b253-b43d43cae1c8
+		summarizeBy: none
+		sourceColumn: [evento]
+
+		annotation SummarizationSetBy = User
+
+	column falha_gps_s
+		dataType: boolean
+		lineageTag: d603d55f-fb13-5a89-adc7-093f74b04ad0
+		summarizeBy: none
+		sourceColumn: [falha_gps_s]
+
+		annotation SummarizationSetBy = User
+
+	partition dim_data = calculated
+		mode: import
+		source =
+				VAR d = CALENDAR ( MIN ( fato_linha[data_bh] ), MAX ( fato_linha[data_bh] ) )
+				RETURN
+				    ADDCOLUMNS (
+				        SELECTCOLUMNS ( d, "data", [Date] ),
+				        "rotulo", FORMAT ( [data], "dd/mm" ),
+				        "dia_semana", SWITCH ( WEEKDAY ( [data], 2 ), 1, "Seg", 2, "Ter", 3, "Qua", 4, "Qui", 5, "Sex", 6, "Sáb", "Dom" ),
+				        "dia_semana_ordem", WEEKDAY ( [data], 2 ),
+				        "semana", [data] - WEEKDAY ( [data], 2 ) + 1,
+				        "semana_rotulo", "Semana de " & FORMAT ( [data] - WEEKDAY ( [data], 2 ) + 1, "dd/mm" ),
+				        "evento", LOOKUPVALUE ( eventos[evento], eventos[data], [data] ),
+				        "falha_gps_s", LOOKUPVALUE ( eventos[falha_gps_s], eventos[data], [data] )
+				    )

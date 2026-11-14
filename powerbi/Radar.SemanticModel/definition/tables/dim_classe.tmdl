@@ -1,0 +1,40 @@
+/// Classes do histograma: intervalo dividido pelo intervalo medio, de 0,05 em 0,05.
+table dim_classe
+	lineageTag: 18c323f3-6fb2-5404-b24b-44f6258faf9a
+
+	column classe
+		dataType: int64
+		formatString: 0
+		lineageTag: 5e76c3cb-cd4e-5a7f-90a9-0882242e1349
+		summarizeBy: none
+		sourceColumn: [classe]
+
+		annotation SummarizationSetBy = User
+
+	column inicio
+		dataType: double
+		formatString: 0.00
+		lineageTag: 283bf6a4-c402-5d8a-8700-faf9b2ebf9b9
+		summarizeBy: none
+		sourceColumn: [inicio]
+
+		annotation SummarizationSetBy = User
+
+	column rotulo
+		dataType: string
+		lineageTag: d69aee9b-6417-56bb-87af-e8d588d0e15d
+		summarizeBy: none
+		sourceColumn: [rotulo]
+		sortByColumn: classe
+
+		annotation SummarizationSetBy = User
+
+	partition dim_classe = calculated
+		mode: import
+		source =
+				SELECTCOLUMNS (
+				    GENERATESERIES ( 0, 80, 1 ),
+				    "classe", [Value],
+				    "inicio", [Value] * 0.05,
+				    "rotulo", IF ( [Value] >= 80, "4+", FORMAT ( [Value] * 0.05, "0.00" ) )
+				)

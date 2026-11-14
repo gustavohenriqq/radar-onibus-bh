@@ -1,0 +1,152 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.3.0/schema.json",
+  "themeCollection": {
+    "baseTheme": {
+      "name": "Fluent2-CY26SU09",
+      "reportVersionAtImport": {
+        "visual": "2.13.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
+      "type": "SharedResources"
+    },
+    "customTheme": {
+      "name": "tema-radar.json",
+      "reportVersionAtImport": {
+        "visual": "2.13.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
+      "type": "RegisteredResources"
+    }
+  },
+  "publicCustomVisuals": [
+    "htmlContent443BE3AD55E043BF878BED274D3A6865"
+  ],
+  "objects": {
+    "section": [
+      {
+        "properties": {
+          "verticalAlignment": {
+            "expr": {
+              "Literal": {
+                "Value": "'Top'"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "outspacePane": [
+      {
+        "properties": {
+          "expanded": {
+            "expr": {
+              "Literal": {
+                "Value": "false"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "resourcePackages": [
+    {
+      "name": "SharedResources",
+      "type": "SharedResources",
+      "items": [
+        {
+          "name": "Fluent2-CY26SU09",
+          "path": "BaseThemes/Fluent2-CY26SU09.json",
+          "type": "BaseTheme"
+        }
+      ]
+    },
+    {
+      "name": "RegisteredResources",
+      "type": "RegisteredResources",
+      "items": [
+        {
+          "name": "tema-radar.json",
+          "path": "tema-radar.json",
+          "type": "CustomTheme"
+        },
+        {
+          "name": "fundo_acoes.png",
+          "path": "fundo_acoes.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_colados.png",
+          "path": "fundo_colados.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_ficha.png",
+          "path": "fundo_ficha.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_linhas.png",
+          "path": "fundo_linhas.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_onde.png",
+          "path": "fundo_onde.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_pontos.png",
+          "path": "fundo_pontos.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_porque.png",
+          "path": "fundo_porque.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_previsao.png",
+          "path": "fundo_previsao.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_qualidade.png",
+          "path": "fundo_qualidade.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_simulador.png",
+          "path": "fundo_simulador.png",
+          "type": "Image"
+        },
+        {
+          "name": "fundo_visao.png",
+          "path": "fundo_visao.png",
+          "type": "Image"
+        }
+      ]
+    },
+    {
+      "name": "radarCarrossel02E4BDFE01EB4C8F9F3046BF8481C8FF",
+      "type": "CustomVisual",
+      "items": [
+        {
+          "name": "radarCarrossel02E4BDFE01EB4C8F9F3046BF8481C8FF.pbiviz.json",
+          "path": "radarCarrossel02E4BDFE01EB4C8F9F3046BF8481C8FF.pbiviz.json",
+          "type": "CustomVisualMetadata"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "useStylableVisualContainerHeader": true,
+    "exportDataMode": "AllowSummarized",
+    "defaultDrillFilterOtherVisuals": true,
+    "allowChangeFilterTypes": true,
+    "useEnhancedTooltips": true,
+    "useDefaultAggregateDisplayName": true
+  }
+}

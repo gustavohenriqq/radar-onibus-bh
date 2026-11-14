@@ -1,0 +1,91 @@
+/// Qualidade do dado por dia (marts/fct_qualidade_diaria).
+table fato_qualidade
+	lineageTag: 6c6cdc75-eb59-5473-ae7a-7515fdf84faf
+
+	column data_bh
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 101960ad-a744-5864-b782-ff34eb0e7466
+		summarizeBy: none
+		sourceColumn: data_bh
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	column passagens
+		dataType: int64
+		formatString: 0
+		lineageTag: 59a4f29e-c5a4-5a84-97e7-73deefbb4229
+		summarizeBy: none
+		sourceColumn: passagens
+
+		annotation SummarizationSetBy = User
+
+	column passagens_validas
+		dataType: int64
+		formatString: 0
+		lineageTag: 071f7500-b05f-51be-b8b4-7927995dfacd
+		summarizeBy: none
+		sourceColumn: passagens_validas
+
+		annotation SummarizationSetBy = User
+
+	column headways
+		dataType: int64
+		formatString: 0
+		lineageTag: bafcb8f0-4cca-5bea-b073-4df9216aa294
+		summarizeBy: none
+		sourceColumn: headways
+
+		annotation SummarizationSetBy = User
+
+	column headways_validos
+		dataType: int64
+		formatString: 0
+		lineageTag: 4009795b-9364-5f3f-86b3-8ae7832d434b
+		summarizeBy: none
+		sourceColumn: headways_validos
+
+		annotation SummarizationSetBy = User
+
+	column headways_feed_parado
+		dataType: int64
+		formatString: 0
+		lineageTag: 6a612226-625c-5e92-9779-bd0b769a12bb
+		summarizeBy: none
+		sourceColumn: headways_feed_parado
+
+		annotation SummarizationSetBy = User
+
+	column linhas
+		dataType: int64
+		formatString: 0
+		lineageTag: b2746c96-f19a-5e47-b151-92e9aea69eb2
+		summarizeBy: none
+		sourceColumn: linhas
+
+		annotation SummarizationSetBy = User
+
+	column cobertura_passagens
+		dataType: double
+		formatString: 0.00
+		lineageTag: 689b93d0-195d-5c3c-9280-bdb04a0f57cf
+		summarizeBy: none
+		sourceColumn: cobertura_passagens
+
+		annotation SummarizationSetBy = User
+
+	partition fato_qualidade = m
+		mode: import
+		source =
+				let
+				    Fonte = PostgreSQL.Database(ServidorPostgres, BancoPostgres),
+				    Tabela = Fonte{[Schema = "radar", Item = "qualidade_diaria"]}[Data],
+				    Selecao = Table.SelectColumns(Tabela, {"data_bh", "passagens", "passagens_validas", "headways", "headways_validos", "headways_feed_parado", "linhas", "cobertura_passagens"}),
+				    Colunas = Table.TransformColumnTypes(Selecao, {{"data_bh", type date}, {"passagens", Int64.Type}, {"passagens_validas", Int64.Type}, {"headways", Int64.Type}, {"headways_validos", Int64.Type}, {"headways_feed_parado", Int64.Type}, {"linhas", Int64.Type}, {"cobertura_passagens", type number}}),
+				    Pronto = Colunas
+				in
+				    Pronto
+
+	annotation PBI_ResultType = Table
