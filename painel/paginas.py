@@ -92,13 +92,14 @@ def faixa_rotulo(cod: str) -> tuple[str, str]:
 
 
 def lista(colunas: str, cab: list[str], linhas: list[list[str]], colunas_cel: str | None = None,
-          ocultar: tuple = ()) -> str:
-    """Tabela leve em grade. ocultar: indices das colunas que somem no celular."""
+          ocultar: tuple = (), estreita: bool = False) -> str:
+    """Tabela leve em grade. ocultar: indices das colunas que somem no celular.
+    estreita: tambem somem num quadro com menos de 600 px (lista larga em meia pagina)."""
     def celulas(itens, tag):
         return "".join(f'<div class="{"oc" if i in ocultar else ""}">{x}</div>' for i, x in enumerate(itens))
     estilo_ = f"--gc:{colunas};" + (f"--gcm:{colunas_cel};" if colunas_cel else "")
     corpo = "".join(f'<div class="lin">{celulas(l, "div")}</div>' for l in linhas)
-    return f'<div class="lista" style="{estilo_}"><div class="cab">{celulas(cab, "div")}</div>{corpo}</div>'
+    return f'<div class="lista{" qe" if estreita else ""}" style="{estilo_}"><div class="cab">{celulas(cab, "div")}</div>{corpo}</div>'
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +315,9 @@ def celula(v, extra: str = "", grande: bool = False, dica: str = "") -> str:
 
 
 def cabecalho_faixas() -> str:
-    return "".join(f'<div class="h">{n}<small>{h}</small></div>' for n, h in FAIXAS.values())
+    # hifen opcional: na grade estreita (semana) "Madrugada" quebra como "Madru-gada", nao no meio da letra
+    return "".join(f'<div class="h">{n.replace("Madrugada", "Madru&shy;gada")}<small>{h}</small></div>'
+                   for n, h in FAIXAS.values())
 
 
 def q_calor(f):
@@ -497,7 +500,7 @@ def q_ranking(f):
                                                    top["excesso_min"], top["colados_pct"])]
     md(lista("2rem minmax(0,1fr) 5.6rem 3.6rem 7rem 3.6rem",
              ["#", "Linha", "Dia a dia", "% rede", "Espera extra (min)", "Colados"], linhas,
-             "2rem minmax(0,1fr) 7.5rem 3.6rem", ocultar=(2, 3)))
+             "2rem minmax(0,1fr) 7.5rem 3.6rem", ocultar=(2, 3), estreita=True))
     tabela = pd.DataFrame({
         "Posição": r["posicao"], "Linha": r["route_id"], "Nome": r["nome"], "Regular (min)": r["regular_min"],
         "Extra (min)": r["excesso_min"], "% da espera extra": r["parte"], "Colados": r["colados_pct"],
@@ -979,7 +982,7 @@ def q_carrossel(f):
     ids = ordem_ficha(r, st.session_state.ficha_ordem)
     if st.session_state.get("ficha") not in ids:
         st.session_state.ficha = f["linhas"][0] if len(f["linhas"]) == 1 and f["linhas"][0] in ids else REDE
-    c1, c2, c3, c4 = st.columns([1.6, .45, 2.6, .45], gap="small", vertical_alignment="bottom")
+    c1, c2, c3, c4 = st.columns([2.1, .45, 2.1, .45], gap="small", vertical_alignment="bottom")
     c1.segmented_control("Ordem", list(ORDENS), format_func=ORDENS.get, key="ficha_ordem")
     c2.button("◀", on_click=mover, args=(ids, -1), width="stretch", help="Linha anterior")
     c3.selectbox("Linha", ids, key="ficha", format_func=lambda x: "Rede inteira" if x == REDE else
