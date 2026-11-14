@@ -40,7 +40,11 @@ table cargas
 				    Fonte = PostgreSQL.Database(ServidorPostgres, BancoPostgres),
 				    Tabela = Fonte{[Schema = "radar", Item = "cargas"]}[Data],
 				    Selecao = Table.SelectColumns(Tabela, {"carregado_em", "de", "ate"}),
-				    Local = Table.TransformColumns(Selecao, {{"carregado_em", each DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_, -3)), type datetime}}),
+				    // timestamptz chega como datetime na hora local da maquina (BRT no Desktop, UTC no servico): volta a UTC e passa a BH (-3, sem horario de verao)
+				    Fuso = DateTimeZone.ZoneHours(DateTimeZone.LocalNow()),
+				    Local = Table.TransformColumns(Selecao, {{"carregado_em", each if _ = null then null
+				        else if Value.Is(_, type datetimezone) then DateTimeZone.RemoveZone(DateTimeZone.SwitchZone(_, -3))
+				        else DateTime.From(_) - #duration(0, Fuso + 3, 0, 0), type datetime}}),
 				    Colunas = Table.TransformColumnTypes(Local, {{"de", type date}, {"ate", type date}})
 				in
 				    Colunas
