@@ -270,7 +270,7 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 .eventos .e span {{ padding-top: .1rem; }}
 
 /* carrossel da ficha */
-.carro {{ display: grid; grid-template-columns: 1fr 1fr 1.6fr 1fr 1fr; gap: .8rem; align-items: center; }}
+.carro {{ display: grid; grid-template-columns: 1fr 1fr 2.4fr 1fr 1fr; gap: .8rem; align-items: center; }}
 .cartao {{ border-radius: 16px; background: var(--painel2); border: 1px solid var(--borda); padding: .9rem 1rem;
            opacity: .55; transform: scale(.94); transition: all .3s var(--curva); min-width: 0; }}
 .cartao.centro {{ opacity: 1; transform: none; border-color: var(--ambar);
@@ -286,9 +286,10 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 .cartao .pos {{ color: var(--apagado); font-size: .78rem; }}
 .cartao.centro .vv {{ font-size: 3.4rem; }}
 .cartao.centro .nm {{ font-size: 1.05rem; white-space: normal; }}
-.cartao .gr {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; margin: .55rem 0 .4rem; }}
+.cartao .gr {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(4.2rem, 1fr)); gap: .4rem; margin: .55rem 0 .4rem; }}
 .cartao .gr div {{ color: var(--suave); font-size: .66rem; font-weight: 800; letter-spacing: .1em; }}
-.cartao .gr b {{ display: block; color: var(--texto); font-size: 1.15rem; font-stretch: 80%; letter-spacing: 0; }}
+.cartao .gr b {{ display: block; color: var(--texto); font-size: 1.15rem; font-stretch: 80%; letter-spacing: 0;
+                  white-space: nowrap; }}
 .cartao svg {{ width: 100%; height: 52px; display: block; }}
 
 /* leituras e acoes */
@@ -330,7 +331,10 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 
 @container (max-width: 720px) {{ .capa {{ grid-template-columns: minmax(0, 1fr); }} }}
 @container (max-width: 860px) {{ .perg {{ grid-template-columns: minmax(0, 1fr); }} }}
-@media (max-width: 1100px) {{ .carro {{ grid-template-columns: 1fr 1.6fr 1fr; }} .carro .cartao.lado2 {{ display: none; }} }}
+/* lista larga em quadro estreito (classe qe): usa as colunas do celular, senao o nome da linha some */
+@container (max-width: 600px) {{ .lista.qe .cab, .lista.qe .lin {{ grid-template-columns: var(--gcm, var(--gc)); }}
+  .lista.qe .oc {{ display: none; }} }}
+@media (max-width: 1100px) {{ .carro {{ grid-template-columns: 1fr 2fr 1fr; }} .carro .cartao.lado2 {{ display: none; }} }}
 @media (max-width: 900px) {{
   .capa {{ grid-template-columns: minmax(0, 1fr); }}
   .perg {{ grid-template-columns: minmax(0, 1fr); }}
