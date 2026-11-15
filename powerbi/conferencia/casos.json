@@ -1,0 +1,12 @@
+{
+  "_doc": "Recortes conferidos entre o modelo do Power BI (DAX) e o banco do painel (SQL). Janelas fechadas: a exportacao so reescreve os ultimos 3 dias, entao o numero de uma janela antiga nao muda entre uma atualizacao do Desktop e outra.",
+  "casos": [
+    {"nome": "rede_janela_analise", "de": "2026-09-15", "ate": "2026-11-05", "agrupar": []},
+    {"nome": "linhas_dia_util_alta", "de": "2026-09-15", "ate": "2026-11-05", "tipo_dia": "dia_util",
+     "alta_frequencia": true, "agrupar": ["route_id"]},
+    {"nome": "faixas_tipo_dia_outubro", "de": "2026-10-01", "ate": "2026-10-31",
+     "agrupar": ["tipo_dia", "faixa_horaria"]},
+    {"nome": "linhas_baixa_sabado", "de": "2026-10-13", "ate": "2026-11-09", "tipo_dia": "sabado",
+     "alta_frequencia": false, "agrupar": ["route_id"]}
+  ]
+}
