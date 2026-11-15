@@ -6,9 +6,9 @@ bucket (o backup envia a hora fechada ha 2 h, no minuto 45). Depois:
 1. traz o conteiner de H para o disco da VM, conferido por SHA-256;
 2. MERGE de H na Silver;
 3. Gold de ontem e hoje (dias de BH), regravando so essas particoes;
-4. na ultima hora do dia de BH, OPTIMIZE da Silver daquele dia e exportacao dos
-   agregados para o banco do painel (servico/exportar.py, Neon);
-5. na ultima hora do domingo, VACUUM da Silver e da Gold.
+4. na ultima hora do dia de BH, OPTIMIZE da Silver daquele dia, exportacao dos
+   agregados para o banco do painel (servico/exportar.py, Neon) e VACUUM da
+   Silver e da Gold, com 24 h de retencao.
 
 Tudo e idempotente: rodar a mesma hora de novo nao muda nenhuma tabela. O coletor
 fica fora do Airflow, como o README decidiu.
@@ -23,7 +23,7 @@ from airflow.providers.standard.sensors.python import PythonSensor
 from airflow.sdk import DAG
 from airflow.timetables.interval import CronDataIntervalTimetable
 
-from radar_comum import data_bh, fecha_dia_bh, fecha_semana_bh, hora_texto, janela_gold_da_hora
+from radar_comum import data_bh, fecha_dia_bh, hora_texto, janela_gold_da_hora
 from radar_tarefas import IMAGEM_GOLD, POOL_SPARK, avisar_falha, manifesto_no_bucket, no_conteiner, pingar
 
 with DAG(
@@ -93,11 +93,6 @@ with DAG(
         pool=POOL_SPARK,
     )
 
-    fim_da_semana = ShortCircuitOperator(
-        task_id="fim_da_semana_bh",
-        python_callable=lambda data_interval_start, **_: fecha_semana_bh(data_interval_start),
-    )
-
     vacuum_silver = no_conteiner("vacuum_silver", "python -m silver.manutencao vacuum", pool=POOL_SPARK)
 
     vacuum_gold = no_conteiner(
@@ -105,5 +100,7 @@ with DAG(
     )
 
     aguardar >> sincronizar >> silver >> gold >> [avisar, fim_do_dia]
-    fim_do_dia >> optimize >> [exportar, fim_da_semana]
-    fim_da_semana >> vacuum_silver >> vacuum_gold
+    # VACUUM todo dia: com 7 dias de retencao e uma vez por semana, as reescritas
+    # horarias da Gold encheram o disco (97% em 15/11/2026).
+    fim_do_dia >> optimize >> [exportar, vacuum_silver]
+    vacuum_silver >> vacuum_gold

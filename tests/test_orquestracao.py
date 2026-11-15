@@ -15,7 +15,6 @@ from compactacao.horas import Hora
 from orquestracao.dags.radar_comum import (
     data_bh,
     fecha_dia_bh,
-    fecha_semana_bh,
     hora_texto,
     janela_gold_da_hora,
     janela_gold_do_reprocessamento,
@@ -56,13 +55,6 @@ def test_so_a_ultima_hora_utc_do_dia_de_bh_fecha_o_dia():
     inicio = datetime(2026, 11, 5, 3, tzinfo=UTC)  # 00:00 de 05/11 em BH
     fechas = [h for h in range(24) if fecha_dia_bh(inicio + timedelta(hours=h))]
     assert fechas == [23]  # 02:00 UTC de 06/11, 23:00 em BH
-
-
-def test_manutencao_semanal_so_no_fim_do_domingo():
-    # 08/11/2026 e domingo; a ultima hora dele em BH comeca 02:00 UTC de 09/11.
-    assert fecha_semana_bh(datetime(2026, 11, 9, 2, tzinfo=UTC))
-    assert not fecha_semana_bh(datetime(2026, 11, 8, 2, tzinfo=UTC))  # fim do sabado
-    assert not fecha_semana_bh(datetime(2026, 11, 9, 1, tzinfo=UTC))
 
 
 def test_reprocessar_refaz_tambem_o_dia_seguinte_na_gold():

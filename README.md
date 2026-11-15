@@ -373,7 +373,7 @@ o bucket de backup. Nada disso toca a VM do coletor.
   Uma posição das 23:59:50 coletada às 00:00:30 pertence ao dia anterior.
 - **`OPTIMIZE` depois do `MERGE`.** Cada partição termina com um arquivo,
   ordenado por `route_id`, e o `VACUUM` remove o que ficou sem uso há mais de
-  7 dias.
+  24 horas (eram 7 dias até 15/11/2026; ver Airflow).
 
 **Medido em 05/11/2026:**
 
@@ -504,7 +504,7 @@ radar_horario (VM 2, uma execução por hora UTC)
   gold             dbt build com a janela de ontem e hoje (dias de BH)
   avisar_ok        ping no healthchecks
   na última hora do dia de BH: OPTIMIZE da Silver daquele dia
-  na última hora do domingo:   VACUUM da Silver e da Gold, 7 dias de retenção
+                               e VACUUM da Silver e da Gold, 24 h de retenção
 
 radar_reprocessar (manual): de, até e camadas -> Silver e Gold da janela
 
