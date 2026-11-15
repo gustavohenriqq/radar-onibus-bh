@@ -598,8 +598,8 @@ def q_piores(f):
                f'<span class="num">{pct(pa)}</span>']
               for p, n, l, h, e, c, pa in zip(m["posicao"], m["stop_name"], m["linhas"], m["horas"], m["excesso_min"],
                                               m["colados_pct"], m["parte"])]
-    md(lista("1.6rem minmax(0,1fr) 7.6rem 3.8rem 3.4rem", ["#", "Ponto", "Espera extra", "Colados", "Parte"],
-             linhas, "1.4rem minmax(0,1fr) 7rem 3.6rem", ocultar=(3,)))
+    md(lista("1.6rem minmax(0,1fr) 9rem 3.8rem 3.4rem", ["#", "Ponto", "Espera extra", "Colados", "Parte"],
+             linhas, "1.4rem minmax(0,1fr) 8.4rem 3.6rem", ocultar=(3,)))
 
 
 def pg_pontos(f):

@@ -171,8 +171,8 @@ div:has(> .st-key-barra) {{ position: sticky; top: 1.2rem; z-index: 60; padding-
 .lista .num {{ text-align: right; font-weight: 800; font-stretch: 80%; font-size: 1.12rem; font-variant-numeric: tabular-nums; }}
 .barra {{ position: relative; height: 1.45rem; display: flex; align-items: center; gap: .5rem; }}
 .barra i {{ display: block; height: 100%; border-radius: 5px; width: var(--w); background: var(--b, var(--ambar));
-            transform-origin: left; animation: crescer .9s var(--curva) both; flex: none; }}
-.barra span {{ font-weight: 800; font-stretch: 80%; font-size: 1.08rem; color: var(--b, var(--ambar)); white-space: nowrap;
+            transform-origin: left; animation: crescer .9s var(--curva) both; flex: 0 1 auto; min-width: 0; }}
+.barra span {{ flex: none; font-weight: 800; font-stretch: 80%; font-size: 1.08rem; color: var(--b, var(--ambar)); white-space: nowrap;
                font-variant-numeric: tabular-nums; }}
 .empilha {{ display: flex; height: 1.6rem; border-radius: 6px; overflow: hidden; }}
 .empilha i {{ display: flex; align-items: center; padding: 0 .5rem; font-style: normal; font-weight: 800; font-size: .88rem;
