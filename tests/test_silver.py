@@ -208,7 +208,9 @@ def test_vacuum_apaga_arquivos_antigos_e_nao_muda_a_tabela(spark, tmp_path):
     semear_bronze(tmp_path, {t + timedelta(hours=1): [{"id": "b", "ts": t + timedelta(hours=1)}]})
     processar_dia(spark, date(2026, 9, 15), dir_h, destino)
     antes = tabela(spark, destino)
-    arquivos = lambda: len(list(Path(destino).rglob("*.parquet")))
+    # So dados: os ALTER TABLE contam versao, e na 10 o Delta grava um checkpoint
+    # .parquet dentro do _delta_log.
+    arquivos = lambda: len([a for a in Path(destino).rglob("*.parquet") if "_delta_log" not in a.parts])
     n = arquivos()
 
     limpar_versoes(spark, destino)  # sem nada com mais de 24 h: nao apaga
