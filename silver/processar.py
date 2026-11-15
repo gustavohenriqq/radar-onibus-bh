@@ -152,13 +152,24 @@ def otimizar(spark, destino: str, datas: list[str]) -> None:
         spark.sql(f"OPTIMIZE delta.`{destino}` WHERE data_bh IN ({em}) ZORDER BY (route_id)")
 
 
-def limpar_versoes(spark, destino: str, horas: int = 168) -> None:
+RETENCAO_HORAS = 24
+
+
+def limpar_versoes(spark, destino: str, horas: int = RETENCAO_HORAS) -> None:
     """Apaga arquivos que a tabela atual nao usa e sao mais velhos que `horas`.
 
     Cada MERGE seguido de OPTIMIZE deixa para tras os arquivos que substituiu, e
     eles continuam no disco por causa do historico de versoes do Delta.
+
+    O Delta 4.4 ignora o `RETAIN n HOURS` do VACUUM (avisa no log) e usa a
+    propriedade delta.deletedFileRetentionDuration da tabela, 7 dias por padrao.
+    Por isso a retencao vai na propriedade, gravada antes de cada VACUUM.
     """
-    spark.sql(f"VACUUM delta.`{destino}` RETAIN {horas} HOURS")
+    spark.sql(
+        f"ALTER TABLE delta.`{destino}` SET TBLPROPERTIES "
+        f"('delta.deletedFileRetentionDuration' = 'interval {horas} hours')"
+    )
+    spark.sql(f"VACUUM delta.`{destino}`")
 
 
 def processar_dia(spark, dia: date, dir_horario: Path, destino: str, optimize: bool = True) -> dict:
@@ -206,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--destino", default=os.environ.get("SILVER_DESTINO", "dados/silver/posicoes"),
                    help="pasta da tabela Delta")
     p.add_argument("--sem-optimize", action="store_true")
-    p.add_argument("--vacuum", action="store_true", help="no fim, apaga versoes antigas (mais de 7 dias)")
+    p.add_argument("--vacuum", action="store_true", help="no fim, apaga versoes antigas (mais de 1 dia)")
     args = p.parse_args(argv)
     if bool(args.hora) == bool(args.de or args.ate) or (args.de is None) != (args.ate is None):
         p.error("use --hora, ou --de e --ate")

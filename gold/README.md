@@ -249,7 +249,7 @@ sh gold/rodar.sh seed
 sh gold/rodar.sh build
 sh gold/rodar.sh build --full-refresh      # reconstrói tudo, de 15/09 até hoje
 sh gold/rodar.sh build --vars '{data_inicio: 2026-10-19, data_fim: 2026-10-26}'
-sh gold/rodar.sh run-operation vacuum_gold # apaga versões com mais de 7 dias
+sh gold/rodar.sh run-operation vacuum_gold # apaga versões com mais de 24 h
 docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-gold:dev \
   python -m gold.conferencia --linhas 62 9104 4110 --de 2026-10-19 --ate 2026-10-30
 docker run --rm -v "$PWD:/app" -v "$HOME/ivy:/root/.ivy2.5.2" -w /app radar-gold:dev \

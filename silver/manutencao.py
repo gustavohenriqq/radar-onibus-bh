@@ -6,8 +6,7 @@ Uso:
 
 Por que separada: com MERGE de hora em hora, rodar OPTIMIZE a cada hora
 reescreveria o dia inteiro 24 vezes, e cada reescrita fica no disco ate o VACUUM.
-O Airflow roda o OPTIMIZE uma vez, quando o dia de BH fecha, e o VACUUM uma vez
-por semana.
+O Airflow roda o OPTIMIZE e depois o VACUUM uma vez, quando o dia de BH fecha.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from datetime import date
 from pathlib import Path
 
 from silver.janela import dias
-from silver.processar import limpar_versoes, otimizar, sessao
+from silver.processar import RETENCAO_HORAS, limpar_versoes, otimizar, sessao
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -30,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--de", type=date.fromisoformat)
     p.add_argument("--ate", type=date.fromisoformat)
     p.add_argument("--destino", default=os.environ.get("SILVER_DESTINO", "dados/silver/posicoes"))
-    p.add_argument("--reter-horas", type=int, default=168)
+    p.add_argument("--reter-horas", type=int, default=RETENCAO_HORAS)
     args = p.parse_args(argv)
     if args.acao == "optimize" and not (args.de and args.ate):
         p.error("optimize pede --de e --ate")

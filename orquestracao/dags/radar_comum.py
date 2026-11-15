@@ -57,7 +57,3 @@ def fecha_dia_bh(inicio: datetime) -> bool:
     """A hora UTC que comeca em `inicio` e a ultima do dia de BH?"""
     return (inicio + timedelta(hours=1)).astimezone(BH).hour == 0
 
-
-def fecha_semana_bh(inicio: datetime) -> bool:
-    """Ultima hora do domingo em BH: a manutencao semanal roda uma vez."""
-    return fecha_dia_bh(inicio) and data_bh(inicio).weekday() == 6

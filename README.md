@@ -373,7 +373,7 @@ o bucket de backup. Nada disso toca a VM do coletor.
   Uma posição das 23:59:50 coletada às 00:00:30 pertence ao dia anterior.
 - **`OPTIMIZE` depois do `MERGE`.** Cada partição termina com um arquivo,
   ordenado por `route_id`, e o `VACUUM` remove o que ficou sem uso há mais de
-  7 dias.
+  24 horas (eram 7 dias até 15/11/2026; ver Airflow).
 
 **Medido em 05/11/2026:**
 
@@ -504,7 +504,7 @@ radar_horario (VM 2, uma execução por hora UTC)
   gold             dbt build com a janela de ontem e hoje (dias de BH)
   avisar_ok        ping no healthchecks
   na última hora do dia de BH: OPTIMIZE da Silver daquele dia
-  na última hora do domingo:   VACUUM da Silver e da Gold, 7 dias de retenção
+                               e VACUUM da Silver e da Gold, 24 h de retenção
 
 radar_reprocessar (manual): de, até e camadas -> Silver e Gold da janela
 
@@ -543,6 +543,23 @@ janela. Provado com a impressão digital de cada tabela por dia
 
 Em regime, cada hora termina cerca de 2 h 50 depois de fechar: o sensor espera a
 compactação e o backup da VM do coletor.
+
+**Retenção de 24 h (15/11/2026).** Em 15/11 o disco da VM chegou a 97%, com
+1,7 GB livres. O Delta 4.4 ignora o `RETAIN 168 HOURS` do `VACUUM` e usa a
+propriedade `delta.deletedFileRetentionDuration` da tabela, 7 dias por padrão.
+Com o `VACUUM` só no domingo, até 14 dias de reescritas horárias da Gold ficavam
+no disco. Agora a propriedade vai para 24 h antes de cada `VACUUM`, e ele roda
+no fim de cada dia de BH. O primeiro, rodado à mão:
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Disco livre na VM | 2,7 GB (94%), já sem 3 imagens Docker paradas | 26 GB (42%) |
+| `gold/int` | 20 GB | 3,6 GB |
+| Silver | 6,7 GB | 2,0 GB |
+| `gold/marts` | 2,9 GB | 0,45 GB |
+| Tempo | | Silver 1 min 54 s; Gold 11 min |
+
+Só `int_headways` perdeu 18.112 arquivos. O time travel passa a voltar um dia.
 
 **Alerta.** A DAG pinga o check `processamento-horario` no fim de cada hora e
 manda `/fail` quando uma tarefa falha. A URL fica no `.env`.

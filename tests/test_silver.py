@@ -10,6 +10,7 @@ bronze_horario/ do dia 15/09/2026 (por exemplo, restaurada com
 from __future__ import annotations
 
 import os
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -207,15 +208,20 @@ def test_vacuum_apaga_arquivos_antigos_e_nao_muda_a_tabela(spark, tmp_path):
     semear_bronze(tmp_path, {t + timedelta(hours=1): [{"id": "b", "ts": t + timedelta(hours=1)}]})
     processar_dia(spark, date(2026, 9, 15), dir_h, destino)
     antes = tabela(spark, destino)
-    arquivos = lambda: len(list(Path(destino).rglob("*.parquet")))
+    # So dados: os ALTER TABLE contam versao, e na 10 o Delta grava um checkpoint
+    # .parquet dentro do _delta_log.
+    arquivos = lambda: len([a for a in Path(destino).rglob("*.parquet") if "_delta_log" not in a.parts])
     n = arquivos()
 
-    limpar_versoes(spark, destino)  # sem nada com mais de 7 dias: nao apaga
+    limpar_versoes(spark, destino)  # sem nada com mais de 24 h: nao apaga
     assert arquivos() == n
+    propriedades = {r.key: r.value for r in spark.sql(f"SHOW TBLPROPERTIES delta.`{destino}`").collect()}
+    assert propriedades["delta.deletedFileRetentionDuration"] == "interval 24 hours"
 
-    spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false")
+    # O Delta 4.4 ignora o RETAIN do VACUUM: so a propriedade da tabela vale, e
+    # a checagem de seguranca do Delta continua ligada.
+    time.sleep(1)
     limpar_versoes(spark, destino, horas=0)
-    spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "true")
     assert arquivos() == 1 < n
     assert tabela(spark, destino) == antes
 
