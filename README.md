@@ -679,6 +679,15 @@ linha, que filtra a página pela linha do centro.
 real por um marcador na hora do commit e o devolve na pasta local. A senha
 nunca passa pelo script: o Desktop pede na primeira atualização.
 
+**Duas travas.** [`tests/test_powerbi.py`](tests/test_powerbi.py) gera o
+projeto em memória e compara com o versionado: TMDL e `visual.json` editados
+à mão no Desktop, e não no gerador, quebram o teste (sumiriam na próxima
+geração). E [`powerbi/conferencia/conferir.py`](powerbi/conferencia/conferir.py)
+roda as 14 métricas no modelo aberto no Desktop (DAX) e no banco (SQL do
+painel), nos recortes de [`casos.json`](powerbi/conferencia/casos.json): rede,
+linhas por tipo de dia e frequência, faixas horárias. Em 15/11/2026: 6.972
+números conferidos, 0 divergências (tolerância relativa de 1e-9).
+
 ![Power BI, Visão geral](docs/img/pbi_visao.png)
 
 ![Power BI, Onde e quando: mapas de calor por linha, faixa horária e dia](docs/img/pbi_onde.png)
@@ -1063,12 +1072,14 @@ powerbi/
   paineis.py         quadros em SVG montados por medida DAX
   arte.py            fundo fixo de cada página
   carrossel/         visual próprio da Ficha da linha (TypeScript)
+  conferencia/       segunda conta: medidas DAX no Desktop contra o SQL do painel
   tools/             filtro do Git que esconde o endereço do banco e utilitários do Desktop
 Dockerfile.spark     imagem do Spark com Delta
 Dockerfile.gold      imagem do dbt-spark, sobre a do Spark
 Dockerfile.ml        imagem da Fase 5: a do Spark mais pandas e scikit-learn
-tests/               137 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
-                     Gold, limpeza do Airflow, o que o modelo da Fase 5 pode ver, banco e painel
+tests/               143 testes: coletor, vigia, formato, idempotência, limpeza, backup, Silver,
+                     Gold, limpeza do Airflow, o que o modelo da Fase 5 pode ver, banco, painel
+                     e o Power BI gerado igual ao versionado
 ```
 
 ## Agradecimento
